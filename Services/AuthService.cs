@@ -1,8 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.Data;
 using ZoraVault.Data;
+using ZoraVault.Helpers;
 using ZoraVault.Models.DTOs;
 using ZoraVault.Models.Entities;
-using ZoraVault.Helpers;
 
 namespace ZoraVault.Services
 {
@@ -17,13 +18,13 @@ namespace ZoraVault.Services
             _serverSecret = serverSecret;
         }
 
-        public async Task<Response> RegisterUserAsync(UserRegistrationReq req)
+        public async Task<PublicUser> RegisterUserAsync(UserRegistrationReq req)
         {
             if (await _db.Users.AnyAsync(u => u.Username == req.Username))
-                return new Response("A user with the same username already exists", 409);
+                throw new DuplicateNameException("A user with the same username already exists");
 
             if (await _db.Users.AnyAsync(u => u.Email == req.Email))
-                return new Response("A user with the same email already exists", 409);
+                throw new DuplicateNameException("A user with the same email already exists");
 
             // The request's PasswordHash is the client-side hashed password (using argon2id)
             // Now, add another layer of security by hashing it again with PBKDF2 + server-side secret (pepper)
@@ -50,18 +51,15 @@ namespace ZoraVault.Services
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
 
-            return new Response("User created successfully", 201, new PublicUser(user));
+            return new PublicUser(user);
         }
 
-        public async Task<Response> LoginUserAsync(UserLoginReq req)
+        public async Task<PublicUser> LoginUserAsync(UserLoginReq req)
         {
             User? user = await _db.Users.FirstOrDefaultAsync(u => 
                 u.Username == req.UsernameOrEmail || 
                 u.Email == req.UsernameOrEmail
-            );
-
-            if (user == null)
-                return new Response("User doesn't exist", 404);
+            ) ?? throw new KeyNotFoundException("User not found");
 
             // Server-side hash
             int serverIterations = user.KdfParams.Iterations; 
@@ -78,12 +76,12 @@ namespace ZoraVault.Services
 
             // Compare the computed hash with the stored hash
             if (serverComputedHash != user.ServerPasswordHash)
-                return new Response("The provided credentials are incorrect", 401);
+                throw new UnauthorizedAccessException("Invalid credentials");
 
             user.LastLogin = DateTime.UtcNow;
             await _db.SaveChangesAsync();
 
-            return new Response();
+            return new PublicUser(user);
         }
     }
 }

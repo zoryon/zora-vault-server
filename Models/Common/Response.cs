@@ -1,4 +1,4 @@
-﻿namespace ZoraVault.Models.DTOs
+﻿namespace ZoraVault.Models.Common
 {
     public class Response(string message = "Success", int statusCode = 200, dynamic data = null!)
     {
