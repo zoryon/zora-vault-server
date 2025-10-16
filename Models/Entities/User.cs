@@ -13,7 +13,7 @@ namespace ZoraVault.Models.Entities
         public required string Email { get; set; }
         public required string ServerPasswordHash { get; set; }
         public required string ServerSalt { get; set; }
-        public required KdfParams KdfParams { get; set; }
+        public required KdfParamsDTO KdfParams { get; set; }
         public string? EncryptedVaultBlob { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? LastLogin { get; set; }

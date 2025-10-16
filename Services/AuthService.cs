@@ -10,15 +10,21 @@ namespace ZoraVault.Services
     public class AuthService
     {
         private readonly ApplicationDbContext _db;
+        private readonly DeviceService _deviceService;
         private readonly string _serverSecret;
+        private readonly string _refreshSecret;
+        private readonly string _accessSecret;
 
-        public AuthService(ApplicationDbContext db, string serverSecret)
+        public AuthService(ApplicationDbContext db, string serverSecret, string refreshSecret, string accessSecret)
         {
             _db = db;
+            _deviceService = new DeviceService(db);
             _serverSecret = serverSecret;
+            _refreshSecret = refreshSecret;
+            _accessSecret = accessSecret;
         }
 
-        public async Task<PublicUser> RegisterUserAsync(UserRegistrationReq req)
+        public async Task<PublicUserDTO> RegisterUserAsync(UserRegistrationReqDTO req)
         {
             if (await _db.Users.AnyAsync(u => u.Username == req.Username))
                 throw new DuplicateNameException("A user with the same username already exists");
@@ -51,10 +57,10 @@ namespace ZoraVault.Services
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
 
-            return new PublicUser(user);
+            return new PublicUserDTO(user);
         }
 
-        public async Task<PublicUser> LoginUserAsync(UserLoginReq req)
+        public async Task<DeviceChallengeDTO> AuthenticateUserAsync(UserLoginReqDTO req)
         {
             User? user = await _db.Users.FirstOrDefaultAsync(u => 
                 u.Username == req.UsernameOrEmail || 
@@ -78,10 +84,59 @@ namespace ZoraVault.Services
             if (serverComputedHash != user.ServerPasswordHash)
                 throw new UnauthorizedAccessException("Invalid credentials");
 
+            // Update last login timestamp
             user.LastLogin = DateTime.UtcNow;
+
+            // Device handling
+            string fingerprint = SecurityHelpers.ComputeSHA256HashHex(req.PublicKey);
+            Device? device = await _db.Devices.FirstOrDefaultAsync(d => d.Fingerprint == fingerprint && d.UserId == user.Id);
+
+            if (device == null)
+            {
+                // It's a new device, register it
+                device = new Device()
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user.Id,
+                    PublicKey = req.PublicKey,
+                    Fingerprint = fingerprint,
+                    CreatedAt = DateTime.UtcNow,
+                    LastSeen = DateTime.UtcNow
+                };
+                await _db.Devices.AddAsync(device);
+                await _db.SaveChangesAsync();
+            }
+
+            string randomPart = SecurityHelpers.GenerateRandomBase64String(32);
+            string challenge = $"{device.Id}-END-{randomPart}";
+            string encryptedChallenge = SecurityHelpers.EncryptWithPublicKey(challenge, req.PublicKey);
+            await _deviceService.SendChallengeAsync(fingerprint, challenge);
+
+            return new DeviceChallengeDTO(encryptedChallenge);
+        }
+
+        public async Task<CreateSessionResDTO> CreateSessionAsync(CreateSessionReqDTO req)
+        {
+            Session session = new()
+            {
+                Id = Guid.NewGuid(),
+                UserId = req.UserId,
+                DeviceId = req.DeviceId,
+                RefreshToken = SecurityHelpers.GenerateRefreshToken(req.UserId, req.DeviceId, _refreshSecret),
+                CreatedAt = DateTime.UtcNow,
+                IpAddress = "0.0.0.0" // TODO: still to be implemented
+            };
+
+            await _db.Sessions.AddAsync(session);
             await _db.SaveChangesAsync();
 
-            return new PublicUser(user);
+            string accessToken = SecurityHelpers.GenerateAccessToken(req.UserId, req.DeviceId, _accessSecret);
+
+            return new CreateSessionResDTO
+            {
+                AccessToken = accessToken,
+                RefreshToken = session.RefreshToken,
+            };
         }
     }
 }

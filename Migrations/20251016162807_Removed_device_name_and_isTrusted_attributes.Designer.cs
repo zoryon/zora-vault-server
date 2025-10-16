@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ZoraVault.Data;
 
@@ -11,9 +12,11 @@ using ZoraVault.Data;
 namespace ZoraVault.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251016162807_Removed_device_name_and_isTrusted_attributes")]
+    partial class Removed_device_name_and_isTrusted_attributes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -70,15 +73,12 @@ namespace ZoraVault.Migrations
                     b.Property<DateTime?>("LastSeen")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<string>("PublicKey")
+                    b.Property<byte[]>("PublicKey")
                         .IsRequired()
-                        .HasColumnType("longtext");
+                        .HasColumnType("longblob");
 
                     b.Property<string>("TempChallenge")
                         .HasColumnType("longtext");
-
-                    b.Property<DateTime?>("TempChallengeIssuedAt")
-                        .HasColumnType("datetime(6)");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("char(36)");
@@ -123,41 +123,6 @@ namespace ZoraVault.Migrations
                     b.HasIndex("VaultItemId");
 
                     b.ToTable("Passkeys");
-                });
-
-            modelBuilder.Entity("ZoraVault.Models.Entities.Session", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<Guid>("DeviceId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("IpAddress")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("RefreshToken")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("UserAgent")
-                        .HasColumnType("longtext");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DeviceId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Sessions");
                 });
 
             modelBuilder.Entity("ZoraVault.Models.Entities.User", b =>
@@ -272,25 +237,6 @@ namespace ZoraVault.Migrations
                     b.Navigation("User");
 
                     b.Navigation("VaultItem");
-                });
-
-            modelBuilder.Entity("ZoraVault.Models.Entities.Session", b =>
-                {
-                    b.HasOne("ZoraVault.Models.Entities.Device", "Device")
-                        .WithMany()
-                        .HasForeignKey("DeviceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("ZoraVault.Models.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Device");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("ZoraVault.Models.Entities.VaultItem", b =>

@@ -1,6 +1,6 @@
 ﻿namespace ZoraVault.Models.DTOs
 {
-    public class KdfParams
+    public class KdfParamsDTO
     {
         public required string Algorithm { get; set; }
         public required int Iterations { get; set; }

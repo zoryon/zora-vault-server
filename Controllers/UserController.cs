@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using System.Data;
 using ZoraVault.Models.Common;
 using ZoraVault.Models.DTOs;
 using ZoraVault.Services;
@@ -36,10 +35,10 @@ namespace ZoraVault.Controllers
          * }
          */
         [HttpPost]
-        public async Task<ApiResponse<PublicUser>> RegisterUser([FromBody] UserRegistrationReq req)
+        public async Task<ApiResponse<PublicUserDTO>> RegisterUser([FromBody] UserRegistrationReqDTO req)
         {
-            PublicUser user = await _authService.RegisterUserAsync(req);
-            return ApiResponse<PublicUser>.Created(user);
+            PublicUserDTO user = await _authService.RegisterUserAsync(req);
+            return ApiResponse<PublicUserDTO>.Created(user);
         }
     }
 }

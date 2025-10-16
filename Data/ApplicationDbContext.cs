@@ -19,12 +19,13 @@ namespace ZoraVault.Data
         public DbSet<Passkey> Passkeys { get; set; }
         public DbSet<Device> Devices { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<Session> Sessions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            var converter = new ValueConverter<KdfParams, string>(
+            var converter = new ValueConverter<KdfParamsDTO, string>(
                 v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<KdfParams>(v, (JsonSerializerOptions?)null)!
+                v => JsonSerializer.Deserialize<KdfParamsDTO>(v, (JsonSerializerOptions?)null)!
             );
 
             modelBuilder.Entity<User>()

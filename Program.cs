@@ -1,34 +1,44 @@
 using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 using ZoraVault.Data;
-using ZoraVault.Services;
+using ZoraVault.Extensions;
 using ZoraVault.Middleware;
-
-var builder = WebApplication.CreateBuilder(args);
+using ZoraVault.Services;
+using ZoraVault.Configuration;
 
 // Load .env file
 Env.Load();
 
-// Get DB connection environment variable
-var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
-if (string.IsNullOrEmpty(connectionString))
-    throw new Exception("DATABASE_URL is not set");
+var builder = WebApplication.CreateBuilder(args);
 
-// Get server secret environment variable
-var serverSecret = Environment.GetEnvironmentVariable("ZORAVAULT_SERVER_SECRET");
-if (string.IsNullOrWhiteSpace(serverSecret))
-    throw new Exception("ZORAVAULT_SERVER_SECRET is not set");
+builder.Configuration.AddEnvironmentVariables();
+
+var dbConnection = builder.Configuration["DATABASE_URL"]
+                   ?? throw new Exception("DATABASE_URL is not set");
 
 // EF Core DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 33))));
+    options.UseMySql(dbConnection, new MySqlServerVersion(new Version(8, 0, 33))));
+
+builder.Services.AddAppSecrets(builder.Configuration, validateOnStart: false);
 
 // Add services to the container.
-builder.Services.AddScoped<AuthService>(provider =>
+builder.Services.AddScoped<AuthService>(sp =>
+{
+    var db = sp.GetRequiredService<ApplicationDbContext>();
+    var secrets = sp.GetRequiredService<Secrets>();
+    return new AuthService(
+        db,
+        serverSecret: secrets.ServerSecret,
+        refreshSecret: secrets.RefreshTokenSecret,
+        accessSecret: secrets.AccessTokenSecret
+    );
+});
+
+builder.Services.AddScoped<DeviceService>(provider =>
 {
     var db = provider.GetRequiredService<ApplicationDbContext>();
-    // var config = provider.GetRequiredService<IConfiguration>();
-    return new AuthService(db, serverSecret);
+    return new DeviceService(db);
 });
 
 // Add controllers
@@ -50,7 +60,6 @@ if (app.Environment.IsDevelopment())
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
 
 app.MapControllers();

@@ -14,14 +14,13 @@ namespace ZoraVault.Models.Entities
         // Deterministic unique fingerprint (SHA256 of public key)
         [MaxLength(64)] // SHA256 hash (in hex)
         public required string Fingerprint { get; set; }
-        public required string DeviceName { get; set; }
-        public required byte[] PublicKey { get; set; }
-        public bool IsTrusted { get; set; } = false;
+        public required string PublicKey { get; set; }
         public string? TempChallenge { get; set; }
+        public DateTime? TempChallengeIssuedAt { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? LastSeen { get; set; }
 
         // Navigation properties
-        public required User User { get; set; }
+        public User User { get; set; } = null!;
     }
 }
