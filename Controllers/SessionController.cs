@@ -26,15 +26,15 @@ namespace ZoraVault.Controllers
             return ApiResponse<DeviceChallengeDTO>.SuccessResponse(challenge, 200, "Login successful, now must verify the device through the challenge");
         }
 
-        [HttpPost("/proofs")]
-        public async Task<ApiResponse<bool>> VerifyDevice([FromBody] VerifyDeviceReqDTO req)
+        [HttpPost("proofs")]
+        public async Task<ApiResponse<CreateSessionResDTO>> VerifyDevice([FromBody] VerifyDeviceReqDTO req)
         {
             // This function verifies the device and creates a session if successful
             VerifyDeviceResDTO result = await _deviceService.VerifyChallengeAsync(req);
             
             CreateSessionResDTO tokens = await _authService.CreateSessionAsync(new CreateSessionReqDTO(result.UserId, result.DeviceId));
 
-            return ApiResponse<bool>.SuccessResponse(true, 200, "Device verified successfully");
+            return ApiResponse<CreateSessionResDTO>.SuccessResponse(tokens, 200, "Device verified successfully");
         }
     }
 }
