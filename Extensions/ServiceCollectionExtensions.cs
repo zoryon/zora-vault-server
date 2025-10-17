@@ -15,12 +15,16 @@ namespace ZoraVault.Extensions
                     options.ServerSecret = configuration["ZORAVAULT_SERVER_SECRET"] ?? string.Empty;
                     options.AccessTokenSecret = configuration["ACCESS_TOKEN_SECRET"] ?? string.Empty;
                     options.RefreshTokenSecret = configuration["REFRESH_TOKEN_SECRET"] ?? string.Empty;
+                    options.ChallengesApiSecret = configuration["CHALLENGES_API_SECRET"] ?? string.Empty;
+                    options.SessionApiSecret = configuration["SESSION_API_SECRET"] ?? string.Empty;
                 })
                 .ValidateDataAnnotations()
                 .Validate(o =>
                     !string.IsNullOrWhiteSpace(o.ServerSecret) &&
                     !string.IsNullOrWhiteSpace(o.AccessTokenSecret) &&
-                    !string.IsNullOrWhiteSpace(o.RefreshTokenSecret),
+                    !string.IsNullOrWhiteSpace(o.RefreshTokenSecret) &&
+                    !string.IsNullOrWhiteSpace(o.ChallengesApiSecret) &&
+                    !string.IsNullOrWhiteSpace(o.SessionApiSecret),
                     "Missing required token secrets")
                 .ValidateOnStart(validateOnStart);
 

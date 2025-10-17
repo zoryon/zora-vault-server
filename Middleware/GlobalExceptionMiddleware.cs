@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Security;
@@ -38,6 +39,7 @@ namespace ZoraVault.Middleware
 
                 // Authentication/authorization
                 UnauthorizedAccessException => StatusCodes.Status401Unauthorized,
+                SecurityTokenException => StatusCodes.Status401Unauthorized,
                 SecurityException => StatusCodes.Status403Forbidden,   // forbidden action
 
                 // Conflict or duplicate resources
@@ -51,12 +53,15 @@ namespace ZoraVault.Middleware
                 ValidationException => StatusCodes.Status400BadRequest, // Data annotations validation
 
                 // External service / network errors
-                TimeoutException => StatusCodes.Status504GatewayTimeout,
                 HttpRequestException => StatusCodes.Status502BadGateway,
+                TimeoutException => StatusCodes.Status504GatewayTimeout,
 
                 // Not implemented / unsupported
                 NotImplementedException => StatusCodes.Status501NotImplemented,
                 NotSupportedException => StatusCodes.Status405MethodNotAllowed, // Method not allowed
+
+                // Must be last in a switch: service unavailable
+                Exception => StatusCodes.Status500InternalServerError,
 
                 // Default: unexpected error
                 _ => StatusCodes.Status500InternalServerError

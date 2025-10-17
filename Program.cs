@@ -31,14 +31,17 @@ builder.Services.AddScoped<AuthService>(sp =>
         db,
         serverSecret: secrets.ServerSecret,
         refreshSecret: secrets.RefreshTokenSecret,
-        accessSecret: secrets.AccessTokenSecret
+        accessSecret: secrets.AccessTokenSecret,
+        challengesApiSecret: secrets.ChallengesApiSecret,
+        sessionApiSecret: secrets.SessionApiSecret
     );
 });
 
-builder.Services.AddScoped<DeviceService>(provider =>
+builder.Services.AddScoped<DeviceService>(sp =>
 {
-    var db = provider.GetRequiredService<ApplicationDbContext>();
-    return new DeviceService(db);
+    var db = sp.GetRequiredService<ApplicationDbContext>();
+    var secrets = sp.GetRequiredService<Secrets>();
+    return new DeviceService(db, sessionApiSecret: secrets.SessionApiSecret);
 });
 
 // Add controllers

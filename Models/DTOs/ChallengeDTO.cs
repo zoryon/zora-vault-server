@@ -1,9 +1,9 @@
 ﻿namespace ZoraVault.Models.DTOs
 {
-    public class VerifyDeviceResDTO
+    public class ChallengeDTO
     {
-        public required bool IsVerified { get; set; }
         public required Guid DeviceId { get; set; }
         public required Guid UserId { get; set; }
+        public required string Random { get; set; } = null!;
     }
 }

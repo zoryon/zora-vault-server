@@ -7,5 +7,7 @@ namespace ZoraVault.Configuration
         [Required] public string ServerSecret { get; set; } = default!;
         [Required] public string AccessTokenSecret { get; set; } = default!;
         [Required] public string RefreshTokenSecret { get; set; } = default!;
+        [Required] public string ChallengesApiSecret { get; set; } = default!;
+        [Required] public string SessionApiSecret { get; set; } = default!;
     }
 }

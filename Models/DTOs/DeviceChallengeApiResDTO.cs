@@ -1,8 +1,8 @@
 ﻿namespace ZoraVault.Models.DTOs
 {
-    public class CreateSessionReqDTO
+    public class DeviceChallengeApiResDTO
     {
-        public string ClientResponse { get; set; } = null!;
+        public string EncryptedChallenge { get; set; } = null!;
         public string AccessApiToken { get; set; } = null!;
     }
 }

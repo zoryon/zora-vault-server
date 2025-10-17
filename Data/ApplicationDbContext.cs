@@ -20,6 +20,7 @@ namespace ZoraVault.Data
         public DbSet<Device> Devices { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<Session> Sessions { get; set; }
+        public DbSet<UserDevice> UserDevices { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -31,6 +32,9 @@ namespace ZoraVault.Data
             modelBuilder.Entity<User>()
                 .Property(u => u.KdfParams)
                 .HasConversion(converter);
+
+            modelBuilder.Entity<UserDevice>()
+                .HasKey(ud => new { ud.UserId, ud.DeviceId });
         }
     }
 }

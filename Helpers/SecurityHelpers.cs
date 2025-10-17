@@ -66,17 +66,25 @@ namespace ZoraVault.Helpers
             return Convert.ToBase64String(encrypted);
         }
 
-        public static string GenerateAccessToken(Guid userId, Guid deviceId, string accessTokenSecret, int expireMinutes = 3)
+        public static string GenerateJWT(Guid userId, string tokenSecret, int expireMinutes, Guid? deviceId = null)
         {
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(accessTokenSecret));
+            // Create signing credentials
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenSecret));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+            // Create claims
             var claims = new[]
             {
+                // Subject claim with user ID
                 new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
-                new Claim("deviceId", deviceId.ToString())
             };
 
+            // Add deviceId claim if provided
+            claims = deviceId.HasValue
+                ? [.. claims, new Claim("deviceId", deviceId.Value.ToString())]
+                : claims;
+
+            // Create the JWT token
             var token = new JwtSecurityToken(
                 claims: claims,
                 expires: DateTime.UtcNow.AddMinutes(expireMinutes),
@@ -86,24 +94,51 @@ namespace ZoraVault.Helpers
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
+        public static string GenerateAccessToken(Guid userId, Guid deviceId, string accessTokenSecret, int expireMinutes = 3)
+        {
+            return GenerateJWT(userId, accessTokenSecret, expireMinutes, deviceId);
+        }
+
         public static string GenerateRefreshToken(Guid userId, Guid deviceId, string refreshTokenSecret, int expireDays = 1)
         {
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(refreshTokenSecret));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            return GenerateJWT(userId, refreshTokenSecret, expireDays * 24 * 60, deviceId);
+        }
 
-            var claims = new[]
+        public static ClaimsPrincipal? ValidateJWT(string token, string tokenSecret, bool validateLifetime = true)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+                throw new ArgumentException("Token cannot be null or empty", nameof(token));
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.UTF8.GetBytes(tokenSecret);
+
+            var validationParameters = new TokenValidationParameters
             {
-                new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
-                new Claim("deviceId", deviceId.ToString())
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ValidateLifetime = validateLifetime,
+                IssuerSigningKey = new SymmetricSecurityKey(key),
+                ValidateIssuerSigningKey = true,
+                ClockSkew = TimeSpan.Zero
             };
 
-            var token = new JwtSecurityToken(
-                claims: claims,
-                expires: DateTime.UtcNow.AddDays(expireDays),
-                signingCredentials: creds
-            );
+            try
+            {
+                var principal = tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
+                // Optional: check token algorithm explicitly
+                if (validatedToken is JwtSecurityToken jwt &&
+                    !jwt.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    throw new SecurityTokenException("Invalid token algorithm");
+                }
+
+                return principal;
+            }
+            catch
+            {
+                throw new SecurityTokenException("Invalid token");
+            }
         }
     }
 }
