@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Security;
 
-namespace ZoraVault.Middleware
+namespace ZoraVault.Middlewares
 {
     public class GlobalExceptionMiddleware
     {

@@ -2,6 +2,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security;
 using System.Text.Json;
+using ZoraVault.Configuration;
 using ZoraVault.Data;
 using ZoraVault.Helpers;
 using ZoraVault.Models.DTOs;
@@ -25,10 +26,10 @@ namespace ZoraVault.Services
         /// </summary>
         /// <param name="db">The application database context</param>
         /// <param name="sessionApiSecret">Secret key for signing session JWTs</param>
-        public DeviceService(ApplicationDbContext db, string sessionApiSecret)
+        public DeviceService(ApplicationDbContext db, Secrets secrets)
         {
             _db = db;
-            _sessionApiSecret = sessionApiSecret;
+            _sessionApiSecret = secrets.SessionApiSecret;
         }
 
         /// <summary>

@@ -2,55 +2,50 @@ using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 using ZoraVault.Data;
 using ZoraVault.Extensions;
-using ZoraVault.Middleware;
+using ZoraVault.Middlewares;
 using ZoraVault.Services;
-using ZoraVault.Configuration;
 
 // Load .env file
 Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
+// --------------------------------------------------------------------
+// CONFIGURATION
+// --------------------------------------------------------------------
 builder.Configuration.AddEnvironmentVariables();
 
 var dbConnection = builder.Configuration["DATABASE_URL"]
                    ?? throw new Exception("DATABASE_URL is not set");
 
-// EF Core DbContext
+// --------------------------------------------------------------------
+// DATABASE
+// --------------------------------------------------------------------
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseMySql(dbConnection, new MySqlServerVersion(new Version(8, 0, 33))));
 
-builder.Services.AddAppSecrets(builder.Configuration, validateOnStart: false);
+// --------------------------------------------------------------------
+// SECRETS
+// --------------------------------------------------------------------
+builder.Services.AddAppSecrets(builder.Configuration);
 
-// Add services to the container.
-builder.Services.AddScoped<AuthService>(sp =>
-{
-    var db = sp.GetRequiredService<ApplicationDbContext>();
-    var secrets = sp.GetRequiredService<Secrets>();
-    return new AuthService(
-        db,
-        serverSecret: secrets.ServerSecret,
-        refreshTokenSecret: secrets.RefreshTokenSecret,
-        accessTokenSecret: secrets.AccessTokenSecret,
-        challengesApiSecret: secrets.ChallengesApiSecret,
-        sessionApiSecret: secrets.SessionApiSecret
-    );
-});
+// --------------------------------------------------------------------
+// SERVICES
+// --------------------------------------------------------------------
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<DeviceService>();
 
-builder.Services.AddScoped<DeviceService>(sp =>
-{
-    var db = sp.GetRequiredService<ApplicationDbContext>();
-    var secrets = sp.GetRequiredService<Secrets>();
-    return new DeviceService(db, sessionApiSecret: secrets.SessionApiSecret);
-});
-
-// Add controllers
+// --------------------------------------------------------------------
+// CONTROLLERS & SWAGGER
+// --------------------------------------------------------------------
 builder.Services.AddControllers();
-
-// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+
+// --------------------------------------------------------------------
+// MIDDLEWARE PIPELINE
+// --------------------------------------------------------------------
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -60,6 +55,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// GLOBAL CUSTOM MIDDLEWARES (in order)
+app.UseMiddleware<AuthMiddleware>();
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseHttpsRedirection();

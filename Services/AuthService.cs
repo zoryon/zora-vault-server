@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.IdentityModel.Tokens.Jwt;
-
+using ZoraVault.Configuration;
 using ZoraVault.Data;
 using ZoraVault.Helpers;
 using ZoraVault.Models.DTOs;
@@ -18,21 +18,12 @@ namespace ZoraVault.Services
     public class AuthService
     {
         private readonly ApplicationDbContext _db;
-        private readonly string _serverSecret;        // Used for server-side password hashing (pepper)
-        private readonly string _refreshTokenSecret;  // Used to sign refresh tokens
-        private readonly string _accessTokenSecret;   // Used to sign short-lived access tokens
-        private readonly string _challengesApiSecret; // Used to issue challenge API temporary tokens
-        private readonly string _sessionApiSecret;    // Used to issue session API temporary tokens
+        private readonly Secrets _secrets;  // Application secrets
 
-
-        public AuthService(ApplicationDbContext db, string serverSecret, string refreshTokenSecret, string accessTokenSecret, string challengesApiSecret, string sessionApiSecret)
+        public AuthService(ApplicationDbContext db, Secrets secrets)
         {
             _db = db;
-            _serverSecret = serverSecret;
-            _refreshTokenSecret = refreshTokenSecret;
-            _accessTokenSecret = accessTokenSecret;
-            _challengesApiSecret = challengesApiSecret;
-            _sessionApiSecret = sessionApiSecret;
+            _secrets = secrets;
         }
 
         /// <summary>
@@ -52,9 +43,9 @@ namespace ZoraVault.Services
             // Here, it's added another layer of security by hashing it again with PBKDF2 + server-side secret (pepper)
             string serverSalt = SecurityHelpers.GenerateSalt();
             string serverPasswdHash = SecurityHelpers.HashPassword(
-                _serverSecret,      // pepper (secret stored only on server)
-                req.PasswordHash,   // client-side hash
-                serverSalt,         // per-user salt
+                _secrets.ServerSecret,  // pepper (secret stored only on server)
+                req.PasswordHash,       // client-side hash
+                serverSalt,             // per-user salt
                 req.KdfParams.Iterations,
                 req.KdfParams.KeyLength
             );
@@ -95,7 +86,7 @@ namespace ZoraVault.Services
 
             // Recompute the server-side hash using provided (client-hashed) password
             string serverComputedHash = SecurityHelpers.HashPassword(
-                _serverSecret, 
+                _secrets.ServerSecret, 
                 req.PasswordHash, 
                 user.ServerSalt, 
                 serverIterations, 
@@ -119,7 +110,7 @@ namespace ZoraVault.Services
             Session? session = await _db.Sessions.FirstOrDefaultAsync(s => s.UserId == userId && s.DeviceId == deviceId);
 
             // Always generate a new refresh token (safe rotation principle)
-            string refreshToken = SecurityHelpers.GenerateRefreshToken(userId, deviceId, _refreshTokenSecret);
+            string refreshToken = SecurityHelpers.GenerateRefreshToken(userId, deviceId, _secrets.RefreshTokenSecret);
             if (session == null)
             {
                 // Create new session entry
@@ -144,7 +135,7 @@ namespace ZoraVault.Services
             await _db.SaveChangesAsync();
 
             // Generate short-lived access token for immediate use
-            string accessToken = SecurityHelpers.GenerateAccessToken(userId, deviceId, _accessTokenSecret);
+            string accessToken = SecurityHelpers.GenerateAccessToken(userId, deviceId, _secrets.AccessTokenSecret);
 
             return new CreateSessionResDTO
             {
@@ -158,7 +149,7 @@ namespace ZoraVault.Services
         /// </summary>
         public string GrantChallengesAPIAccess(Guid userId)
         {
-            return SecurityHelpers.GenerateJWT(userId, _challengesApiSecret, 2); // Token valid for 2 minutes
+            return SecurityHelpers.GenerateJWT(userId, _secrets.ChallengesApiSecret, 2); // Token valid for 2 minutes
         }
 
         /// <summary>
@@ -166,7 +157,7 @@ namespace ZoraVault.Services
         /// </summary>
         public string GrantSessionAPIAccess(Guid userId, Guid deviceId)
         {
-            return SecurityHelpers.GenerateJWT(userId, _sessionApiSecret, 2, deviceId); // Token valid for 2 minutes
+            return SecurityHelpers.GenerateJWT(userId, _secrets.SessionApiSecret, 2, deviceId); // Token valid for 2 minutes
         }
 
         /// <summary>
@@ -175,7 +166,7 @@ namespace ZoraVault.Services
         /// </summary>
         public Guid VerifyDeviceChallengeAccessTokenAsync(string token)
         {
-            var claims = SecurityHelpers.ValidateJWT(token, _challengesApiSecret)
+            var claims = SecurityHelpers.ValidateJWT(token, _secrets.ChallengesApiSecret)
                 ?? throw new UnauthorizedAccessException("Invalid or expired token");
 
             string userIdStr = claims.FindFirst(JwtRegisteredClaimNames.Sub)?.Value 
@@ -194,7 +185,7 @@ namespace ZoraVault.Services
         public async Task<string> RefreshAccessTokenAsync(string refreshToken)
         {
             // Validate the refresh token
-            var claims = SecurityHelpers.ValidateJWT(refreshToken, _refreshTokenSecret)
+            var claims = SecurityHelpers.ValidateJWT(refreshToken, _secrets.RefreshTokenSecret)
                 ?? throw new UnauthorizedAccessException("Invalid or expired refresh token");
 
             // Extract userId and deviceId from claims
@@ -220,7 +211,7 @@ namespace ZoraVault.Services
             await _db.SaveChangesAsync();
 
             // Return a freshly issued access token
-            return SecurityHelpers.GenerateAccessToken(userId, deviceId, _accessTokenSecret);
+            return SecurityHelpers.GenerateAccessToken(userId, deviceId, _secrets.AccessTokenSecret);
         }
     }
 }

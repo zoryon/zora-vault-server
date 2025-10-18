@@ -6,7 +6,7 @@ namespace ZoraVault.Extensions
     public static class ServiceCollectionExtensions
     {
         // Register Secrets configuration with validation
-        public static IServiceCollection AddAppSecrets(this IServiceCollection services, IConfiguration configuration, bool validateOnStart = false)
+        public static IServiceCollection AddAppSecrets(this IServiceCollection services, IConfiguration configuration, bool validateOnStart = true)
         {
             services
                 .AddOptions<Secrets>()
