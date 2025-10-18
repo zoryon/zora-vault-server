@@ -29,7 +29,8 @@ namespace ZoraVault.Controllers
             if (!result.IsVerified)
                 throw new UnauthorizedAccessException("Device verification failed");
 
-            CreateSessionResDTO tokens = await _authService.CreateSessionAsync(result);
+            string ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            CreateSessionResDTO tokens = await _authService.CreateSessionAsync(result.UserId, result.DeviceId, ipAddress);
 
             return ApiResponse<CreateSessionResDTO>.SuccessResponse(tokens, 200, "Device verified successfully");
         }

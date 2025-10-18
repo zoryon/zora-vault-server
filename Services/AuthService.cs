@@ -94,22 +94,25 @@ namespace ZoraVault.Services
             return new PublicUserDTO(user);
         }
 
-        public async Task<CreateSessionResDTO> CreateSessionAsync(VerifyDeviceResDTO res)
+        public async Task<CreateSessionResDTO> CreateSessionAsync(Guid userId, Guid deviceId, string ipAddress)
         {
-            Session session = new()
-            {
-                Id = Guid.NewGuid(),
-                UserId = res.UserId,
-                DeviceId = res.DeviceId,
-                RefreshToken = SecurityHelpers.GenerateRefreshToken(res.UserId, res.DeviceId, _refreshSecret),
-                CreatedAt = DateTime.UtcNow,
-                IpAddress = "0.0.0.0" // TODO: still to be implemented
-            };
+            Session? session = await _db.Sessions.FirstOrDefaultAsync(s => s.UserId == userId && s.DeviceId == deviceId);
+            
+            if (session == null)
+                session = new()
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    DeviceId = deviceId,
+                    RefreshToken = SecurityHelpers.GenerateRefreshToken(userId, deviceId, _refreshSecret),
+                    CreatedAt = DateTime.UtcNow,
+                    IpAddress = ipAddress
+                };
 
             await _db.Sessions.AddAsync(session);
             await _db.SaveChangesAsync();
 
-            string accessToken = SecurityHelpers.GenerateAccessToken(res.UserId, res.DeviceId, _accessSecret);
+            string accessToken = SecurityHelpers.GenerateAccessToken(userId, deviceId, _accessSecret);
 
             return new CreateSessionResDTO
             {
