@@ -6,8 +6,21 @@ using System.Text;
 
 namespace ZoraVault.Helpers
 {
+    /// <summary>
+    /// SecurityHelpers provides cryptographic utilities for:
+    /// - Password hashing and salting
+    /// - SHA256 hashing
+    /// - Random string generation
+    /// - Public-key encryption
+    /// - JWT generation and validation
+    /// </summary>
     public class SecurityHelpers
     {
+        /// <summary>
+        /// Generates a cryptographically secure random salt for password hashing.
+        /// </summary>
+        /// <param name="size">Length of salt in bytes (default: 32 bytes / 256 bits)</param>
+        /// <returns>Base64-encoded salt string</returns>
         public static string GenerateSalt(int size = 32)
         {
             // 256-bit salt (32 bytes) for PBKDF2
@@ -17,6 +30,15 @@ namespace ZoraVault.Helpers
             return Convert.ToBase64String(saltBytes);
         }
 
+        /// <summary>
+        /// Hashes a password using PBKDF2 with SHA256, a salt, iterations, and a server-side pepper.
+        /// </summary>
+        /// <param name="pepper">Server-side secret added to the password</param>
+        /// <param name="password">Client-side hashed password</param>
+        /// <param name="salt">Base64-encoded salt</param>
+        /// <param name="iterations">Number of PBKDF2 iterations</param>
+        /// <param name="keyLength">Length of derived key in bytes</param>
+        /// <returns>Base64-encoded hash</returns>
         public static string HashPassword(string pepper, string password, string salt, int iterations, int keyLength)
         {
             byte[] passwordBytes = Encoding.UTF8.GetBytes(password);
@@ -28,14 +50,18 @@ namespace ZoraVault.Helpers
             return Convert.ToBase64String(hashBytes);
         }
 
+        /// <summary>
+        /// Computes the SHA256 hash of an input string and returns it as a lowercase hex string.
+        /// </summary>
+        /// <param name="input">Input string to hash</param>
+        /// <returns>Hexadecimal SHA256 hash</returns>
         public static string ComputeSHA256HashHex(string input)
         {
             if (string.IsNullOrEmpty(input))
                 throw new ArgumentException("Input cannot be null or empty", nameof(input));
 
-            using SHA256 sha256 = SHA256.Create();
             byte[] bytes = Encoding.UTF8.GetBytes(input);
-            byte[] hash = sha256.ComputeHash(bytes);
+            byte[] hash = SHA256.HashData(bytes);
 
             // Convert byte array to hex string
             StringBuilder sb = new StringBuilder();
@@ -47,6 +73,11 @@ namespace ZoraVault.Helpers
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Generates a cryptographically secure random string, Base64-encoded.
+        /// </summary>
+        /// <param name="byteLength">Number of random bytes</param>
+        /// <returns>Base64-encoded random string</returns>
         public static string GenerateRandomBase64String(int byteLength)
         {
             byte[] randomBytes = new byte[byteLength];
@@ -55,6 +86,12 @@ namespace ZoraVault.Helpers
             return Convert.ToBase64String(randomBytes);
         }
 
+        /// <summary>
+        /// Encrypts a plaintext string using an RSA public key (PEM format).
+        /// </summary>
+        /// <param name="plaintext">Text to encrypt</param>
+        /// <param name="publicKeyPem">RSA public key in PEM format</param>
+        /// <returns>Base64-encoded encrypted string</returns>
         public static string EncryptWithPublicKey(string plaintext, string publicKeyPem)
         {
             using RSA rsa = RSA.Create();
@@ -66,6 +103,14 @@ namespace ZoraVault.Helpers
             return Convert.ToBase64String(encrypted);
         }
 
+        /// <summary>
+        /// Generates a signed JWT containing user ID (and optionally device ID).
+        /// </summary>
+        /// <param name="userId">User GUID</param>
+        /// <param name="tokenSecret">Secret key for signing</param>
+        /// <param name="expireMinutes">Token expiration in minutes</param>
+        /// <param name="deviceId">Optional device GUID to include as claim</param>
+        /// <returns>JWT as string</returns>
         public static string GenerateJWT(Guid userId, string tokenSecret, int expireMinutes, Guid? deviceId = null)
         {
             // Create signing credentials
@@ -94,16 +139,29 @@ namespace ZoraVault.Helpers
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
+        /// <summary>Generates a short-lived access token for a device and user</summary>
         public static string GenerateAccessToken(Guid userId, Guid deviceId, string accessTokenSecret, int expireMinutes = 3)
         {
             return GenerateJWT(userId, accessTokenSecret, expireMinutes, deviceId);
         }
 
-        public static string GenerateRefreshToken(Guid userId, Guid deviceId, string refreshTokenSecret, int expireDays = 1)
+        /// <summary>Generates a refresh token for a device and user</summary>
+        public static string GenerateRefreshToken(Guid userId, Guid deviceId, string refreshTokenSecret, int expireHours = 3)
         {
-            return GenerateJWT(userId, refreshTokenSecret, expireDays * 24 * 60, deviceId);
+            if (expireHours > 3)
+                throw new ArgumentException("Refresh token expiration cannot exceed 3 hours", nameof(expireHours));
+
+            return GenerateJWT(userId, refreshTokenSecret, expireHours * 60, deviceId);
         }
 
+        /// <summary>
+        /// Validates a JWT token and returns its claims principal if valid.
+        /// </summary>
+        /// <param name="token">JWT string</param>
+        /// <param name="tokenSecret">Secret key for signature verification</param>
+        /// <param name="validateLifetime">Whether to validate expiration</param>
+        /// <returns>ClaimsPrincipal representing token claims</returns>
+        /// <exception cref="SecurityTokenException">Thrown if token is invalid</exception>
         public static ClaimsPrincipal? ValidateJWT(string token, string tokenSecret, bool validateLifetime = true)
         {
             if (string.IsNullOrWhiteSpace(token))
@@ -126,7 +184,7 @@ namespace ZoraVault.Helpers
             {
                 var principal = tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
 
-                // Optional: check token algorithm explicitly
+                // Ensure token uses expected algorithm
                 if (validatedToken is JwtSecurityToken jwt &&
                     !jwt.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
                 {

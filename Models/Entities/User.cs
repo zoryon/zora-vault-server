@@ -16,7 +16,6 @@ namespace ZoraVault.Models.Entities
         public required KdfParamsDTO KdfParams { get; set; }
         public string? EncryptedVaultBlob { get; set; }
         public DateTime CreatedAt { get; set; }
-        public DateTime? LastLogin { get; set; }
 
         // Navigation properties
         public ICollection<VaultItem> VaultItems { get; set; } = [];

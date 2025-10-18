@@ -30,8 +30,8 @@ builder.Services.AddScoped<AuthService>(sp =>
     return new AuthService(
         db,
         serverSecret: secrets.ServerSecret,
-        refreshSecret: secrets.RefreshTokenSecret,
-        accessSecret: secrets.AccessTokenSecret,
+        refreshTokenSecret: secrets.RefreshTokenSecret,
+        accessTokenSecret: secrets.AccessTokenSecret,
         challengesApiSecret: secrets.ChallengesApiSecret,
         sessionApiSecret: secrets.SessionApiSecret
     );

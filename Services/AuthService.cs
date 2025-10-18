@@ -9,30 +9,39 @@ using ZoraVault.Models.Entities;
 
 namespace ZoraVault.Services
 {
+    /// <summary>
+    /// AuthService handles all authentication-related logic:
+    /// - User registration & authentication
+    /// - Session creation and refresh
+    /// - Challenge API and session token issuance
+    /// </summary>
     public class AuthService
     {
         private readonly ApplicationDbContext _db;
-        private readonly DeviceService _deviceService;
-        private readonly string _serverSecret;
-        private readonly string _refreshSecret;
-        private readonly string _accessSecret;
-        private readonly string _challengesApiSecret;
-        private readonly string _sessionApiSecret;
+        private readonly string _serverSecret;        // Used for server-side password hashing (pepper)
+        private readonly string _refreshTokenSecret;  // Used to sign refresh tokens
+        private readonly string _accessTokenSecret;   // Used to sign short-lived access tokens
+        private readonly string _challengesApiSecret; // Used to issue challenge API temporary tokens
+        private readonly string _sessionApiSecret;    // Used to issue session API temporary tokens
 
-        public AuthService(ApplicationDbContext db, string serverSecret, string refreshSecret, string accessSecret, string challengesApiSecret, string sessionApiSecret)
+
+        public AuthService(ApplicationDbContext db, string serverSecret, string refreshTokenSecret, string accessTokenSecret, string challengesApiSecret, string sessionApiSecret)
         {
             _db = db;
             _serverSecret = serverSecret;
-            _refreshSecret = refreshSecret;
-            _accessSecret = accessSecret;
+            _refreshTokenSecret = refreshTokenSecret;
+            _accessTokenSecret = accessTokenSecret;
             _challengesApiSecret = challengesApiSecret;
             _sessionApiSecret = sessionApiSecret;
-
-            _deviceService = new DeviceService(db, _sessionApiSecret);
         }
 
+        /// <summary>
+        /// Registers a new user by applying one new layer of hashing:
+        /// (before) client-side hash + (now) server-side hash (PBKDF2 + pepper)
+        /// </summary>
         public async Task<PublicUserDTO> RegisterUserAsync(UserRegistrationReqDTO req)
         {
+            // Check for duplicates (username or email must be unique)
             if (await _db.Users.AnyAsync(u => u.Username == req.Username))
                 throw new DuplicateNameException("A user with the same username already exists");
 
@@ -40,16 +49,17 @@ namespace ZoraVault.Services
                 throw new DuplicateNameException("A user with the same email already exists");
 
             // The request's PasswordHash is the client-side hashed password (using argon2id)
-            // Now, it's added another layer of security by hashing it again with PBKDF2 + server-side secret (pepper)
+            // Here, it's added another layer of security by hashing it again with PBKDF2 + server-side secret (pepper)
             string serverSalt = SecurityHelpers.GenerateSalt();
             string serverPasswdHash = SecurityHelpers.HashPassword(
-                _serverSecret, 
-                req.PasswordHash,
-                serverSalt, 
+                _serverSecret,      // pepper (secret stored only on server)
+                req.PasswordHash,   // client-side hash
+                serverSalt,         // per-user salt
                 req.KdfParams.Iterations,
                 req.KdfParams.KeyLength
             );
 
+            // Create and persist user record
             User user = new()
             {
                 Id = Guid.NewGuid(),
@@ -64,21 +74,26 @@ namespace ZoraVault.Services
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
 
+            // Return only public data, no sensitive fields
             return new PublicUserDTO(user);
         }
 
+        /// <summary>
+        /// Authenticates the user by re-hashing the provided password hash and comparing.
+        /// </summary>
         public async Task<PublicUserDTO> AuthenticateUserAsync(UserAuthReqDTO req)
         {
+            // Try finding user by username OR email
             User? user = await _db.Users.FirstOrDefaultAsync(u => 
                 u.Username == req.UsernameOrEmail || 
                 u.Email == req.UsernameOrEmail
             ) ?? throw new KeyNotFoundException("User not found");
 
-            // Server-side hash
+            // Get KDF parameters used when the user was registered
             int serverIterations = user.KdfParams.Iterations; 
             int keyLength = user.KdfParams.KeyLength;
 
-            // Generate the server-side hash from the "unverified" client-provided hash
+            // Recompute the server-side hash using provided (client-hashed) password
             string serverComputedHash = SecurityHelpers.HashPassword(
                 _serverSecret, 
                 req.PasswordHash, 
@@ -94,13 +109,20 @@ namespace ZoraVault.Services
             return new PublicUserDTO(user);
         }
 
+        /// <summary>
+        /// Creates or updates a user session.
+        /// Generates both refresh and access tokens, and stores session info with IP address.
+        /// </summary>
         public async Task<CreateSessionResDTO> CreateSessionAsync(Guid userId, Guid deviceId, string ipAddress)
         {
+            // Try to find an existing session for the user and device
             Session? session = await _db.Sessions.FirstOrDefaultAsync(s => s.UserId == userId && s.DeviceId == deviceId);
 
-            string refreshToken = SecurityHelpers.GenerateRefreshToken(userId, deviceId, _refreshSecret);
+            // Always generate a new refresh token (safe rotation principle)
+            string refreshToken = SecurityHelpers.GenerateRefreshToken(userId, deviceId, _refreshTokenSecret);
             if (session == null)
             {
+                // Create new session entry
                 session = new()
                 {
                     Id = Guid.NewGuid(),
@@ -113,6 +135,7 @@ namespace ZoraVault.Services
                 await _db.Sessions.AddAsync(session);
             } else
             {
+                // Update existing session (rotate refresh token and update IP)
                 session.RefreshToken = refreshToken;
                 session.IpAddress = ipAddress;
                 _db.Sessions.Update(session);
@@ -120,7 +143,8 @@ namespace ZoraVault.Services
 
             await _db.SaveChangesAsync();
 
-            string accessToken = SecurityHelpers.GenerateAccessToken(userId, deviceId, _accessSecret);
+            // Generate short-lived access token for immediate use
+            string accessToken = SecurityHelpers.GenerateAccessToken(userId, deviceId, _accessTokenSecret);
 
             return new CreateSessionResDTO
             {
@@ -129,16 +153,26 @@ namespace ZoraVault.Services
             };
         }
 
+        /// <summary>
+        /// Issues a very short-lived token (2 min) that allows a client to access the Challenges API.
+        /// </summary>
         public string GrantChallengesAPIAccess(Guid userId)
         {
             return SecurityHelpers.GenerateJWT(userId, _challengesApiSecret, 2); // Token valid for 2 minutes
         }
 
+        /// <summary>
+        /// Issues a short-lived token (2 min) for session-related APIs.
+        /// </summary>
         public string GrantSessionAPIAccess(Guid userId, Guid deviceId)
         {
             return SecurityHelpers.GenerateJWT(userId, _sessionApiSecret, 2, deviceId); // Token valid for 2 minutes
         }
 
+        /// <summary>
+        /// Verifies a token used to access device challenge API endpoints.
+        /// Returns the userId if valid.
+        /// </summary>
         public Guid VerifyDeviceChallengeAccessTokenAsync(string token)
         {
             var claims = SecurityHelpers.ValidateJWT(token, _challengesApiSecret)
@@ -151,6 +185,42 @@ namespace ZoraVault.Services
                 throw new UnauthorizedAccessException("Invalid token: user ID is not a valid GUID");
 
             return userId;
+        }
+
+        /// <summary>
+        /// Validates a refresh token and issues a new access token.
+        /// Ensures that the token belongs to a valid user session and device.
+        /// </summary>
+        public async Task<string> RefreshAccessTokenAsync(string refreshToken)
+        {
+            // Validate the refresh token
+            var claims = SecurityHelpers.ValidateJWT(refreshToken, _refreshTokenSecret)
+                ?? throw new UnauthorizedAccessException("Invalid or expired refresh token");
+
+            // Extract userId and deviceId from claims
+            string? userIdStr = claims.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+            string? deviceIdStr = claims.FindFirst("deviceId")?.Value;
+            if (string.IsNullOrEmpty(userIdStr) || string.IsNullOrEmpty(deviceIdStr))
+                throw new UnauthorizedAccessException("Invalid token: missing claims");
+
+            // Convert IDs from string to Guid
+            if (!Guid.TryParse(userIdStr, out Guid userId) || !Guid.TryParse(deviceIdStr, out Guid deviceId))
+                throw new UnauthorizedAccessException("Invalid token");
+
+            // Ensure the refresh token matches what is stored in DB for this user & device
+            Session? session = await _db.Sessions.FirstOrDefaultAsync(s => s.UserId == userId && s.DeviceId == deviceId);
+            if (session == null || session.RefreshToken != refreshToken)
+                throw new UnauthorizedAccessException("Invalid refresh token");
+
+            // Update device's last seen
+            Device? device = await _db.Devices.FirstOrDefaultAsync(d => d.Id == deviceId)
+                ?? throw new KeyNotFoundException("Device not found");
+            device.LastSeen = DateTime.UtcNow;
+            _db.Devices.Update(device);
+            await _db.SaveChangesAsync();
+
+            // Return a freshly issued access token
+            return SecurityHelpers.GenerateAccessToken(userId, deviceId, _accessTokenSecret);
         }
     }
 }

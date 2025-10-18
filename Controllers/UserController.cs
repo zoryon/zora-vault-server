@@ -5,39 +5,38 @@ using ZoraVault.Services;
 
 namespace ZoraVault.Controllers
 {
+    /// <summary>
+    /// Handles all API endpoints related to user accounts.
+    /// This includes:
+    /// - User registration
+    /// </summary>
     [ApiController]
     [Route("api/users")]
     public class UserController : ControllerBase
     {
-        private readonly AuthService _authService;
+        private readonly AuthService _authService;  // Service responsible for user registration and authentication
 
+        /// <summary>
+        /// Constructor injects AuthService dependency.
+        /// </summary>
+        /// <param name="authService">The authentication service handling user-related business logic.</param>
         public UserController(AuthService authService)
         {
             _authService = authService;
         }
 
-        /* 
-         * POST /api/users HTTP/1.1
-         * Content-Type: application/json
-         * 
-         * Request body (application/json):
-         * {
-         *   "username": "zoryon",
-         *   "email": "zoryon@example.com",
-         *   "passwordHash": "<client-derived value>",
-         *   "kdfParams": {
-         *     "algorithm": "Argon2id",
-         *     "iterations": 100_000,
-         *     "keyLength": 32,
-         *     "memoryKb": 65536,
-         *     "parallelism": 4
-         *   }
-         * }
-         */
+        // ---------------------------------------------------------------------------
+        // POST /api/users
+        // ---------------------------------------------------------------------------
+        /// <summary>
+        /// Registers a new user with the provided registration details.
+        /// </summary>
         [HttpPost]
         public async Task<ApiResponse<PublicUserDTO>> RegisterUser([FromBody] UserRegistrationReqDTO req)
         {
+            // Delegate user registration to the AuthService (handles all validations and hashing)
             PublicUserDTO user = await _authService.RegisterUserAsync(req);
+
             return ApiResponse<PublicUserDTO>.Created(user);
         }
     }
