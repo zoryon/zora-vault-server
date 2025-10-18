@@ -32,7 +32,7 @@ namespace ZoraVault.Controllers
             string ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             CreateSessionResDTO tokens = await _authService.CreateSessionAsync(result.UserId, result.DeviceId, ipAddress);
 
-            return ApiResponse<CreateSessionResDTO>.SuccessResponse(tokens, 200, "Device verified successfully");
+            return ApiResponse<CreateSessionResDTO>.SuccessResponse(tokens, 200, "Authorized");
         }
 
         // POST /api/sessions/credentials
