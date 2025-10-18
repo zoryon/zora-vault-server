@@ -9,7 +9,6 @@ namespace ZoraVault.Models.DTOs
         public string Email { get; set; }
         public KdfParamsDTO KdfParams { get; set; }
         public DateTime CreatedAt { get; set; }
-        public DateTime? LastLogin { get; set; } = null!;
 
         public PublicUserDTO(User user)
         {
@@ -18,7 +17,6 @@ namespace ZoraVault.Models.DTOs
             Email = user.Email;
             KdfParams = user.KdfParams;
             CreatedAt = user.CreatedAt;
-            LastLogin = user.LastLogin;
         }
     }
 }
