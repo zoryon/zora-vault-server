@@ -110,13 +110,14 @@ namespace ZoraVault.Services
                     CreatedAt = DateTime.UtcNow,
                     IpAddress = ipAddress
                 };
+                await _db.Sessions.AddAsync(session);
             } else
             {
                 session.RefreshToken = refreshToken;
                 session.IpAddress = ipAddress;
+                _db.Sessions.Update(session);
             }
 
-            await _db.Sessions.AddAsync(session);
             await _db.SaveChangesAsync();
 
             string accessToken = SecurityHelpers.GenerateAccessToken(userId, deviceId, _accessSecret);
