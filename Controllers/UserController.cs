@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using ZoraVault.Models.Common;
-using ZoraVault.Models.DTOs;
+using ZoraVault.Models.Internal;
 using ZoraVault.Services;
+using ZoraVault.Models.DTOs.Users;
+using ZoraVault.Models.Internal.Common;
 
 namespace ZoraVault.Controllers
 {
@@ -32,12 +33,12 @@ namespace ZoraVault.Controllers
         /// Registers a new user with the provided registration details.
         /// </summary>
         [HttpPost]
-        public async Task<ApiResponse<PublicUserDTO>> RegisterUser([FromBody] UserRegistrationReqDTO req)
+        public async Task<ApiResponse<PublicUser>> RegisterUser([FromBody] UserRegistrationRequest req)
         {
             // Delegate user registration to the AuthService (handles all validations and hashing)
-            PublicUserDTO user = await _authService.RegisterUserAsync(req);
+            PublicUser user = await _authService.RegisterUserAsync(req);
 
-            return ApiResponse<PublicUserDTO>.Created(user);
+            return ApiResponse<PublicUser>.Created(user);
         }
     }
 }

@@ -1,6 +1,6 @@
-﻿namespace ZoraVault.Models.DTOs
+﻿namespace ZoraVault.Models.Internal
 {
-    public class VerifyDeviceResDTO
+    public class DeviceVerificationResult
     {
         public required bool IsVerified { get; set; }
         public required Guid DeviceId { get; set; }

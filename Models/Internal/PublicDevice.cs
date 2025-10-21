@@ -1,6 +1,6 @@
 ﻿using ZoraVault.Models.Entities;
 
-namespace ZoraVault.Models.DTOs
+namespace ZoraVault.Models.Internal
 {
     public class PublicDevice
     {

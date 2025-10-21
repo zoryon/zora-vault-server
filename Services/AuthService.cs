@@ -4,8 +4,10 @@ using System.IdentityModel.Tokens.Jwt;
 using ZoraVault.Configuration;
 using ZoraVault.Data;
 using ZoraVault.Helpers;
-using ZoraVault.Models.DTOs;
+using ZoraVault.Models.DTOs.Sessions;
+using ZoraVault.Models.DTOs.Users;
 using ZoraVault.Models.Entities;
+using ZoraVault.Models.Internal;
 
 namespace ZoraVault.Services
 {
@@ -30,7 +32,7 @@ namespace ZoraVault.Services
         /// Registers a new user by applying one new layer of hashing:
         /// (before) client-side hash + (now) server-side hash (PBKDF2 + pepper)
         /// </summary>
-        public async Task<PublicUserDTO> RegisterUserAsync(UserRegistrationReqDTO req)
+        public async Task<PublicUser> RegisterUserAsync(UserRegistrationRequest req)
         {
             // Check for duplicates (username or email must be unique)
             if (await _db.Users.AnyAsync(u => u.Username == req.Username))
@@ -66,13 +68,13 @@ namespace ZoraVault.Services
             await _db.SaveChangesAsync();
 
             // Return only public data, no sensitive fields
-            return new PublicUserDTO(user);
+            return new PublicUser(user);
         }
 
         /// <summary>
         /// Authenticates the user by re-hashing the provided password hash and comparing.
         /// </summary>
-        public async Task<PublicUserDTO> AuthenticateUserAsync(UserAuthReqDTO req)
+        public async Task<PublicUser> AuthenticateUserAsync(UserAuthRequest req)
         {
             // Try finding user by username OR email
             User? user = await _db.Users.FirstOrDefaultAsync(u => 
@@ -97,14 +99,14 @@ namespace ZoraVault.Services
             if (serverComputedHash != user.ServerPasswordHash)
                 throw new UnauthorizedAccessException("Invalid credentials");
 
-            return new PublicUserDTO(user);
+            return new PublicUser(user);
         }
 
         /// <summary>
         /// Creates or updates a user session.
         /// Generates both refresh and access tokens, and stores session info with IP address.
         /// </summary>
-        public async Task<CreateSessionResDTO> CreateSessionAsync(Guid userId, Guid deviceId, string ipAddress)
+        public async Task<CreateSessionResponse> CreateSessionAsync(Guid userId, Guid deviceId, string ipAddress)
         {
             // Try to find an existing session for the user and device
             Session? session = await _db.Sessions.FirstOrDefaultAsync(s => s.UserId == userId && s.DeviceId == deviceId);
@@ -137,7 +139,7 @@ namespace ZoraVault.Services
             // Generate short-lived access token for immediate use
             string accessToken = SecurityHelpers.GenerateAccessToken(userId, deviceId, _secrets.AccessTokenSecret);
 
-            return new CreateSessionResDTO
+            return new CreateSessionResponse
             {
                 AccessToken = accessToken,
                 RefreshToken = session.RefreshToken,

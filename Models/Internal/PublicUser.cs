@@ -1,16 +1,16 @@
 ﻿using ZoraVault.Models.Entities;
 
-namespace ZoraVault.Models.DTOs
+namespace ZoraVault.Models.Internal
 {
-    public class PublicUserDTO
+    public class PublicUser
     {
         public Guid Id { get; set; }
         public string Username { get; set; }
         public string Email { get; set; }
-        public KdfParamsDTO KdfParams { get; set; }
+        public KdfParams KdfParams { get; set; }
         public DateTime CreatedAt { get; set; }
 
-        public PublicUserDTO(User user)
+        public PublicUser(User user)
         {
             Id = user.Id;
             Username = user.Username;

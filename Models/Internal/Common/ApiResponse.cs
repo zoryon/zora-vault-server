@@ -1,6 +1,4 @@
-﻿using System.Text.Json;
-
-namespace ZoraVault.Models.Common
+﻿namespace ZoraVault.Models.Internal.Common
 {
     public class ApiResponse<T>
     {

@@ -5,8 +5,9 @@ using System.Text.Json;
 using ZoraVault.Configuration;
 using ZoraVault.Data;
 using ZoraVault.Helpers;
-using ZoraVault.Models.DTOs;
+using ZoraVault.Models.DTOs.Sessions;
 using ZoraVault.Models.Entities;
+using ZoraVault.Models.Internal;
 
 namespace ZoraVault.Services
 {
@@ -88,13 +89,13 @@ namespace ZoraVault.Services
         /// Verifies a client's challenge response and, if valid, links the device to the user.
         /// </summary>
         /// <param name="req">Request DTO containing client response and session token</param>
-        /// <returns>A <see cref="VerifyDeviceResDTO"/> indicating verification result</returns>
+        /// <returns>A <see cref="DeviceVerificationResult"/> indicating verification result</returns>
         /// <exception cref="UnauthorizedAccessException">Thrown if the token or challenge is invalid</exception>
         /// <exception cref="SecurityException">Thrown if the challenge is expired or mismatched</exception>
-        public async Task<VerifyDeviceResDTO> VerifyChallengeAsync(CreateSessionReqDTO req)
+        public async Task<DeviceVerificationResult> VerifyChallengeAsync(CreateSessionRequest req)
         {
             // Validate the session API token
-            var claims = SecurityHelpers.ValidateJWT(req.AccessApiToken, _sessionApiSecret)
+            var claims = SecurityHelpers.ValidateJWT(req.AccessSessionApiToken, _sessionApiSecret)
                 ?? throw new UnauthorizedAccessException("Invalid or expired token");
 
             // Extract userId and deviceId from JWT claims
@@ -116,10 +117,10 @@ namespace ZoraVault.Services
                 throw new SecurityException("Challenge expired");
 
             // Deserialize client-provided challenge payload
-            ChallengeDTO? payload;
+            Challenge? payload;
             try
             {
-                payload = JsonSerializer.Deserialize<ChallengeDTO>(req.ClientResponse);
+                payload = JsonSerializer.Deserialize<Challenge>(req.ClientResponse);
             }
             catch
             {
@@ -158,7 +159,7 @@ namespace ZoraVault.Services
             await _db.SaveChangesAsync();
 
             // Return verification result
-            return new VerifyDeviceResDTO
+            return new DeviceVerificationResult
             {
                 IsVerified = true,
                 DeviceId = device.Id,

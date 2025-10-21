@@ -1,9 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System.Text.Json;
-
-using ZoraVault.Models.DTOs;
 using ZoraVault.Models.Entities;
+using ZoraVault.Models.Internal;
 
 namespace ZoraVault.Data
 {
@@ -38,9 +37,9 @@ namespace ZoraVault.Data
             // Conversion for KdfParamsDTO:
             // The KdfParams property of User is a complex type.
             // EF Core cannot map it directly, so we serialize it to JSON for storage.
-            var converter = new ValueConverter<KdfParamsDTO, string>(
+            var converter = new ValueConverter<KdfParams, string>(
                 v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<KdfParamsDTO>(v, (JsonSerializerOptions?)null)!
+                v => JsonSerializer.Deserialize<KdfParams>(v, (JsonSerializerOptions?)null)!
             );
 
             modelBuilder.Entity<User>()

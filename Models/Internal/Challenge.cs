@@ -1,6 +1,6 @@
-﻿namespace ZoraVault.Models.DTOs
+﻿namespace ZoraVault.Models.Internal
 {
-    public class ChallengeDTO
+    public class Challenge
     {
         public required Guid DeviceId { get; set; }
         public required Guid UserId { get; set; }

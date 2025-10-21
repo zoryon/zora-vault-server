@@ -1,8 +1,0 @@
-﻿namespace ZoraVault.Models.DTOs
-{
-    public class CreateSessionReqDTO
-    {
-        public string ClientResponse { get; set; } = null!;
-        public string AccessApiToken { get; set; } = null!;
-    }
-}

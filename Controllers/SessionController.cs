@@ -1,9 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 using ZoraVault.Helpers;
-using ZoraVault.Models.Common;
-using ZoraVault.Models.DTOs;
+using ZoraVault.Models.Internal;
+using ZoraVault.Models.DTOs.Sessions;
 using ZoraVault.Services;
+using ZoraVault.Models.DTOs.Challenges;
+using ZoraVault.Models.DTOs.Users;
+using ZoraVault.Models.Internal.Common;
 
 namespace ZoraVault.Controllers
 {
@@ -36,11 +39,11 @@ namespace ZoraVault.Controllers
         /// Verifies a device challenge response and creates a new session for the user if verification succeeds.
         /// </summary>
         [HttpPost]
-        public async Task<ApiResponse<CreateSessionResDTO>> LoginAuthenticatedUserAsync([FromBody] CreateSessionReqDTO req)
+        public async Task<ApiResponse<CreateSessionResponse>> LoginAuthenticatedUserAsync([FromBody] CreateSessionRequest req)
         {
             // Verify the challenge response provided by the device.
             // This ensures the device actually owns the correct private key.
-            VerifyDeviceResDTO result = await _deviceService.VerifyChallengeAsync(req);
+            DeviceVerificationResult result = await _deviceService.VerifyChallengeAsync(req);
             if (!result.IsVerified)
                 throw new UnauthorizedAccessException("Device verification failed");
 
@@ -48,10 +51,10 @@ namespace ZoraVault.Controllers
             string ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
             // Create a new session or update existing one and generate access/refresh tokens
-            CreateSessionResDTO tokens = await _authService.CreateSessionAsync(result.UserId, result.DeviceId, ipAddress);
+            CreateSessionResponse tokens = await _authService.CreateSessionAsync(result.UserId, result.DeviceId, ipAddress);
 
             // Return tokens to the client
-            return ApiResponse<CreateSessionResDTO>.SuccessResponse(tokens, 200, "Authorized");
+            return ApiResponse<CreateSessionResponse>.SuccessResponse(tokens, 200, "Authorized");
         }
 
         // ---------------------------------------------------------------------------
@@ -62,10 +65,10 @@ namespace ZoraVault.Controllers
         /// and returns a temporary API token that allows device verification.
         /// </summary>
         [HttpPost("credentials")]
-        public async Task<ApiResponse<string>> AuthAndIssueApiTokenAsync([FromBody] UserAuthReqDTO req)
+        public async Task<ApiResponse<string>> AuthAndIssueApiTokenAsync([FromBody] UserAuthRequest req)
         {
             // Authenticate the user
-            PublicUserDTO user = await _authService.AuthenticateUserAsync(req)
+            PublicUser user = await _authService.AuthenticateUserAsync(req)
                 ?? throw new UnauthorizedAccessException("Invalid credentials");
 
             // Grant a short-lived API token (2 min) used to call the challenge endpoints.
@@ -88,17 +91,17 @@ namespace ZoraVault.Controllers
         /// The challenge must later be decrypted and answered by the device using its private key.
         /// </summary>
         [HttpPost("challenges")]
-        public async Task<ApiResponse<DeviceChallengeApiResDTO>> IssueDeviceChallengeAsync([FromBody] DeviceChallengeApiReqDTO req)
+        public async Task<ApiResponse<IssueDeviceChallengeResponse>> IssueDeviceChallengeAsync([FromBody] IssueDeviceChallengeRequest req)
         {
             // Verify the API token (the one from /credentials) and get the user ID
-            Guid userId = _authService.VerifyDeviceChallengeAccessTokenAsync(req.AccessApiToken);
+            Guid userId = _authService.VerifyDeviceChallengeAccessTokenAsync(req.AccessChallengeApiToken);
 
             // Find the device by its public key or register it as a new one
             PublicDevice device = await _deviceService.FindOrRegisterDeviceAsync(req.PublicKey);
 
             // Construct a cryptographic challenge object
             // It includes device ID, user ID, and a random string for uniqueness
-            ChallengeDTO challengeObject = new()
+            Challenge challengeObject = new()
             {
                 DeviceId = device.Id,
                 UserId = userId,
@@ -115,10 +118,10 @@ namespace ZoraVault.Controllers
 
             // Encrypt the plaintext challenge with the device's public key,
             // so only that device (with its private key) can decrypt and respond.
-            return ApiResponse<DeviceChallengeApiResDTO>.SuccessResponse(new DeviceChallengeApiResDTO
+            return ApiResponse<IssueDeviceChallengeResponse>.SuccessResponse(new IssueDeviceChallengeResponse
             {
                 EncryptedChallenge = SecurityHelpers.EncryptWithPublicKey(plainChallenge, req.PublicKey),
-                AccessApiToken = _authService.GrantSessionAPIAccess(userId, device.Id)
+                AccessSessionApiToken = _authService.GrantSessionAPIAccess(userId, device.Id)
             }, 200, "Challenge issued correctly");
         }
 
