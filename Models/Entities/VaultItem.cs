@@ -3,7 +3,13 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ZoraVault.Models.Entities
 {
-    public enum VaultItemType { Password, Note, Attachment }
+    public enum VaultItemType { 
+        Login, 
+        Identity,
+        Card,
+        Note, 
+        SSHKey,
+    }
 
     public class VaultItem
     {
@@ -15,11 +21,12 @@ namespace ZoraVault.Models.Entities
 
         public required VaultItemType Type { get; set; }
 
+        [MaxLength(50000, ErrorMessage = "EncryptedData exceeds the maximum allowed size of 50 KB")]
         public required byte[] EncryptedData { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 
         // Navigation properties
-        public required User User { get; set; }
+        public User User { get; set; } = null!;
     }
 }
