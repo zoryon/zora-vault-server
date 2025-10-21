@@ -9,10 +9,14 @@ namespace ZoraVault.Models.Entities
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public Guid Id { get; set; }
 
-        public required string Fingerprint { get; set; } // SHA256(publicKey)
-        public required string PublicKey { get; set; }
+        [MaxLength(64)]
+        public required byte[] Fingerprint { get; set; } // SHA256(publicKey)
 
-        public string? TempChallenge { get; set; }
+        [MaxLength(8192)]
+        public required byte[] PublicKey { get; set; }
+
+        [MaxLength(8192)]
+        public byte[]? TempChallenge { get; set; }
 
         public DateTime? TempChallengeIssuedAt { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

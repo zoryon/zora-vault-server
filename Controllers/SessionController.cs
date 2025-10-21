@@ -97,7 +97,7 @@ namespace ZoraVault.Controllers
             Guid userId = _authService.VerifyDeviceChallengeAccessTokenAsync(req.AccessChallengeApiToken);
 
             // Find the device by its public key or register it as a new one
-            PublicDevice device = await _deviceService.FindOrRegisterDeviceAsync(req.PublicKey);
+            PublicDevice device = await _deviceService.FindOrRegisterDeviceAsync(req.PublicKeyBase64);
 
             // Construct a cryptographic challenge object
             // It includes device ID, user ID, and a random string for uniqueness
@@ -120,7 +120,7 @@ namespace ZoraVault.Controllers
             // so only that device (with its private key) can decrypt and respond.
             return ApiResponse<IssueDeviceChallengeResponse>.SuccessResponse(new IssueDeviceChallengeResponse
             {
-                EncryptedChallenge = SecurityHelpers.EncryptWithPublicKey(plainChallenge, req.PublicKey),
+                EncryptedChallenge = SecurityHelpers.EncryptWithPublicKey(plainChallenge, req.PublicKeyBase64),
                 AccessSessionApiToken = _authService.GrantSessionAPIAccess(userId, device.Id)
             }, 200, "Challenge issued correctly");
         }

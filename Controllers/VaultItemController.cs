@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using ZoraVault.Extensions;
 using ZoraVault.Models.DTOs.VaultItems;
-using ZoraVault.Models.Entities;
 using ZoraVault.Models.Internal;
 using ZoraVault.Models.Internal.Common;
 using ZoraVault.Services;

@@ -91,13 +91,35 @@ namespace ZoraVault.Helpers
         /// Encrypts a plaintext string using an RSA public key (PEM format).
         /// </summary>
         /// <param name="plaintext">Text to encrypt</param>
-        /// <param name="publicKeyPem">RSA public key in PEM format</param>
+        /// <param name="PublicKeyBase64">RSA public key bytes (expected to be SubjectPublicKeyInfo/SPKI format) encoded as a Base64 string.</param>
         /// <returns>Base64-encoded encrypted string</returns>
-        public static string EncryptWithPublicKey(string plaintext, string publicKeyPem)
+        public static string EncryptWithPublicKey(string plaintext, string publicKeyBase64)
         {
-            using RSA rsa = RSA.Create();
-            rsa.ImportFromPem(publicKeyPem.ToCharArray());
+            // Decode the Base64 string into raw key bytes
+            byte[] publicKeyBytes;
+            try
+            {
+                publicKeyBytes = Convert.FromBase64String(publicKeyBase64);
+            }
+            catch (FormatException)
+            {
+                // Handle case where the input string is not valid Base64
+                throw new ArgumentException("The public key string is not valid Base64.", nameof(publicKeyBase64));
+            }
 
+            using RSA rsa = RSA.Create();
+            try
+            {
+                // Import the public key using the standard SubjectPublicKeyInfo (SPKI) format
+                rsa.ImportSubjectPublicKeyInfo(publicKeyBytes, out _);
+            }
+            catch (CryptographicException ex)
+            {
+                // Handle case where the Base64 data is not a valid public key
+                throw new ArgumentException("The decoded Base64 data is not a valid RSA public key.", nameof(publicKeyBase64), ex);
+            }
+
+            // Encrypt the plaintext
             byte[] data = Encoding.UTF8.GetBytes(plaintext);
             byte[] encrypted = rsa.Encrypt(data, RSAEncryptionPadding.OaepSHA256);
 

@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using ZoraVault.Configuration;
 using ZoraVault.Data;
@@ -36,15 +38,17 @@ namespace ZoraVault.Services
         /// <summary>
         /// Finds a device by its public key fingerprint or registers a new one if it does not exist.
         /// </summary>
-        /// <param name="publicKey">Device's public key</param>
+        /// <param name="publicKey">Device's public key in base64 format</param>
         /// <returns>A <see cref="PublicDevice"/> containing device info</returns>
-        public async Task<PublicDevice> FindOrRegisterDeviceAsync(string publicKey)
+        public async Task<PublicDevice> FindOrRegisterDeviceAsync(string publicKeyBase64)
         {
+            byte[] publicKeyBytes = Convert.FromBase64String(publicKeyBase64);
+
             // Compute fingerprint (SHA256 hash of the public key)
-            string fingerprint = SecurityHelpers.ComputeSHA256HashHex(publicKey);
+            byte[] fingerprintBytes = SHA256.HashData(publicKeyBytes);
 
             // Look for an existing device with the same fingerprint and return it if found
-            Device? existingDevice = await _db.Devices.FirstOrDefaultAsync(d => d.Fingerprint == fingerprint);
+            Device? existingDevice = await _db.Devices.FirstOrDefaultAsync(d => d.Fingerprint.SequenceEqual(fingerprintBytes));
             if (existingDevice != null)
                 return new PublicDevice(existingDevice);
 
@@ -52,8 +56,8 @@ namespace ZoraVault.Services
             Device device = new()
             {
                 Id = Guid.NewGuid(),
-                Fingerprint = fingerprint,
-                PublicKey = publicKey,
+                Fingerprint = fingerprintBytes,
+                PublicKey = publicKeyBytes,
                 CreatedAt = DateTime.UtcNow,
             };
 
@@ -77,12 +81,12 @@ namespace ZoraVault.Services
                 ?? throw new KeyNotFoundException("Device not found");
 
             // Save challenge and timestamp
-            device.TempChallenge = plainChallenge;
+            device.TempChallenge = Encoding.UTF8.GetBytes(plainChallenge);
             device.TempChallengeIssuedAt = DateTime.UtcNow;
 
             _db.Devices.Update(device);
 
-            return await _db.SaveChangesAsync() != 0;
+            return await _db.SaveChangesAsync() > 0;
         }
 
         /// <summary>
@@ -113,7 +117,11 @@ namespace ZoraVault.Services
                 ?? throw new UnauthorizedAccessException("Invalid challenge response");
 
             // Challenge expiration safeguard (e.g. 2 minutes)
-            if (device.TempChallengeIssuedAt == null || DateTime.UtcNow - device.TempChallengeIssuedAt > TimeSpan.FromMinutes(2))
+            if (
+                device.TempChallenge == null || 
+                device.TempChallengeIssuedAt == null || 
+                DateTime.UtcNow - device.TempChallengeIssuedAt > TimeSpan.FromMinutes(2)
+            ) 
                 throw new SecurityException("Challenge expired");
 
             // Deserialize client-provided challenge payload
@@ -134,8 +142,10 @@ namespace ZoraVault.Services
             if (payload.DeviceId != device.Id)
                 throw new SecurityException("Challenge device ID mismatch");
 
+            byte[] clientResponseBytes = Encoding.UTF8.GetBytes(req.ClientResponse);
+
             // Verify stored challenge matches client response
-            if (device.TempChallenge != req.ClientResponse)
+            if (!device.TempChallenge.SequenceEqual(clientResponseBytes))
                 throw new UnauthorizedAccessException("Invalid challenge response");
 
             // Link user and device if not already linked

@@ -23,7 +23,6 @@ namespace ZoraVault.Data
         // Properties representing database entities
         public DbSet<User> Users { get; set; }
         public DbSet<VaultItem> VaultItems { get; set; }
-        public DbSet<Passkey> Passkeys { get; set; }
         public DbSet<Device> Devices { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<Session> Sessions { get; set; }

@@ -23,6 +23,7 @@ namespace ZoraVault.Models.Entities
 
         [MaxLength(50000, ErrorMessage = "EncryptedData exceeds the maximum allowed size of 50 KB")]
         public required byte[] EncryptedData { get; set; }
+
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 

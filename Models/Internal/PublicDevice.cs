@@ -5,7 +5,7 @@ namespace ZoraVault.Models.Internal
     public class PublicDevice
     {
         public Guid Id { get; set; }
-        public string PublicKey { get; set; }
+        public byte[] PublicKey { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? LastSeen { get; set; } = null!;
 
