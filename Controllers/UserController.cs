@@ -8,21 +8,25 @@ using ZoraVault.Extensions;
 namespace ZoraVault.Controllers
 {
     /// <summary>
-    /// Handles all API endpoints related to user accounts.
-    /// This includes:
+    /// The UserController handles all API endpoints related to user accounts.
+    /// Responsibilities include:
+    /// - Retrieving the current user
     /// - User registration
+    /// - Updating user fields
+    /// - Updating device-specific user settings
     /// </summary>
     [ApiController]
     [Route("api/users")]
     public class UserController : ControllerBase
     {
         private readonly AuthService _authService;  // Service responsible for auth operations
-        private readonly UserService _userService;  // Service responsible for user operations
+        private readonly UserService _userService;  // Handles user data fetching and settings updates
 
         /// <summary>
-        /// Constructor injects AuthService dependency.
+        /// Constructor injects required services.
         /// </summary>
-        /// <param name="authService">The authentication service handling user-related business logic.</param>
+        /// <param name="authService">The authentication service for registration and security operations.</param>
+        /// <param name="userService">The user service for fetching and updating user data.</param>
         public UserController(AuthService authService, UserService userService)
         {
             _authService = authService;
@@ -30,8 +34,12 @@ namespace ZoraVault.Controllers
         }
 
         // ---------------------------------------------------------------------------
-        // POST /api/users/me
+        // GET /api/users/me
         // ---------------------------------------------------------------------------
+        /// <summary>
+        /// Retrieves information about the currently authenticated user.
+        /// </summary>
+        /// <returns>A <see cref="PublicUser"/> DTO containing public user data.</returns>
         [HttpGet("me")]
         public async Task<ApiResponse<PublicUser>> GetCurrentUserAsync()
         {
@@ -45,8 +53,11 @@ namespace ZoraVault.Controllers
         // POST /api/users
         // ---------------------------------------------------------------------------
         /// <summary>
-        /// Registers a new user with the provided registration details.
+        /// Registers a new user using the provided registration request.
+        /// Performs validations, password hashing, and stores the new user in the database.
         /// </summary>
+        /// <param name="req">User registration details.</param>
+        /// <returns>A <see cref="PublicUser"/> DTO containing the newly created user's public info.</returns>
         [HttpPost]
         public async Task<ApiResponse<PublicUser>> RegisterUser([FromBody] UserRegistrationRequest req)
         {
@@ -60,8 +71,10 @@ namespace ZoraVault.Controllers
         // PATCH /api/users/me
         // ---------------------------------------------------------------------------
         /// <summary>
-        /// Update some fields of a user with the provided details.
+        /// Updates selective fields of the current user, such as username or encrypted vault blob.
         /// </summary>
+        /// <param name="req">DTO containing fields to update.</param>
+        /// <returns>The updated <see cref="PublicUser"/> object.</returns>
         [HttpPatch("me")]
         public async Task<ApiResponse<PublicUser>> UpdateCurrentUserAsync([FromBody] PatchUserRequest req)
         {
@@ -75,8 +88,11 @@ namespace ZoraVault.Controllers
         // PUT /api/users/me/settings
         // ---------------------------------------------------------------------------
         /// <summary>
-        /// Update all fields of a user settings with the provided details.
+        /// Fully replaces the current user's device-specific settings.
+        /// Updates all fields of UserSettings for the authenticated device.
         /// </summary>
+        /// <param name="req">DTO containing all new user settings.</param>
+        /// <returns>A <see cref="UpdateUserSettingsResponse"/> representing updated settings.</returns>
         [HttpPut("me/settings")]
         public async Task<ApiResponse<UpdateUserSettingsResponse>> UpdateCurrentUserAsync([FromBody] UpdateUserSettingsRequest req)
         {
