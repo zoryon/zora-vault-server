@@ -8,17 +8,22 @@ namespace ZoraVault.Models.Entities
         public required Guid UserId { get; set; }
         public required Guid DeviceId { get; set; }
 
-        // Technical Settings
-        public bool UnlockWithBiometrics { get; set; } = false;
+        // Server-enforced technical settings
         public int SessionTimeoutMinutes { get; set; } = 3;
-        public bool AllowScreenCapture { get; set; } = false;
 
         // Preference Settings
-        public ThemeType Theme { get; set; } = ThemeType.Dark;
-        public bool EnableAutoFill { get; set; } = true;
-        public bool EnableAccessibility { get; set; } = true;
-        public bool EnableClipboardClearing { get; set; } = true;
-        public int ClipboardClearDelaySeconds { get; set; } = 15;
+        public ThemeType Theme { get; set; } = ThemeType.Dark;  // Could be client-side only, but stored for consistency across devices
+
+        /*
+         * - - - CLIENT SIDE ONLY SETTINGS - - -
+         * public bool UnlockWithBiometrics { get; set; } = false;
+         * public bool AllowScreenCapture { get; set; } = false;
+         * public bool EnableAutoFill { get; set; } = true;
+         * public bool EnableAccessibility { get; set; } = true;
+         * public bool EnableClipboardClearing { get; set; } = true;
+         * public int ClipboardClearDelaySeconds { get; set; } = 15;
+         * - - - - - - - - - - - - - - - - - - -
+         */
 
         // Navigation properties
         public User User { get; set; } = null!;

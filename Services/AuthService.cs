@@ -119,14 +119,8 @@ namespace ZoraVault.Services
                     Id = Guid.NewGuid(),
                     UserId = userId,
                     DeviceId = deviceId,
-                    ClipboardClearDelaySeconds = 15,
-                    EnableClipboardClearing = true,
-                    AllowScreenCapture = false,
-                    Theme = ThemeType.Dark,
-                    UnlockWithBiometrics = false,
                     SessionTimeoutMinutes = 3,
-                    EnableAutoFill = true,
-                    EnableAccessibility = true
+                    Theme = ThemeType.Dark,
                 });
             }
 
