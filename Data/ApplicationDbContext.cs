@@ -20,13 +20,16 @@ namespace ZoraVault.Data
         {
         }
 
-        // Properties representing database entities
+        // ---------------------------------------------------------------------------
+        // DbSet properties (tables)
+        // ---------------------------------------------------------------------------
         public DbSet<User> Users { get; set; }
         public DbSet<VaultItem> VaultItems { get; set; }
         public DbSet<Device> Devices { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<Session> Sessions { get; set; }
         public DbSet<UserDevice> UserDevices { get; set; }
+        public DbSet<UserSettings> UserSettings { get; set; }
 
         // ---------------------------------------------------------------------------
         // Model configuration
@@ -50,6 +53,26 @@ namespace ZoraVault.Data
             // we define a composite primary key on UserId + DeviceId
             modelBuilder.Entity<UserDevice>()
                 .HasKey(ud => new { ud.UserId, ud.DeviceId });
+
+            // Relationships for UserSettings
+            modelBuilder.Entity<UserSettings>(entity =>
+            {
+                // One User has many UserSettings
+                entity.HasOne(us => us.User)
+                    .WithMany(u => u.UserSettings)
+                    .HasForeignKey(us => us.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // One Device has many UserSettings
+                entity.HasOne(us => us.Device)
+                    .WithMany(d => d.UserSettings)
+                    .HasForeignKey(us => us.DeviceId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Ensure each (User, Device) pair has only one settings entry
+                entity.HasIndex(us => new { us.UserId, us.DeviceId })
+                      .IsUnique();
+            });
         }
     }
 }

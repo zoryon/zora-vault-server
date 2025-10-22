@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using ZoraVault.Models.Internal;
+using ZoraVault.Models.Internal.Enum;
 
 namespace ZoraVault.Models.Entities
 {
@@ -24,10 +25,12 @@ namespace ZoraVault.Models.Entities
         public required KdfParams KdfParams { get; set; }
         public byte[]? EncryptedVaultBlob { get; set; }
         public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
 
         // Navigation properties
         public ICollection<VaultItem> VaultItems { get; set; } = [];
         public ICollection<Device> Devices { get; set; } = [];
         public ICollection<AuditLog> AuditLogs { get; set; } = [];
+        public ICollection<UserSettings> UserSettings { get; set; } = [];   // Each user can have multiple settings (but one per device)
     }
 }

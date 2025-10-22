@@ -25,5 +25,6 @@ namespace ZoraVault.Models.Entities
         // Navigation properties
         public ICollection<UserDevice> UserDevices { get; set; } = [];
         public ICollection<Session> Sessions { get; set; } = [];
+        public ICollection<UserSettings> UserSettings { get; set; } = [];   // Each device can have multiple user-specific settings
     }
 }

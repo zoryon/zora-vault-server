@@ -8,6 +8,7 @@ using ZoraVault.Models.DTOs.Sessions;
 using ZoraVault.Models.DTOs.Users;
 using ZoraVault.Models.Entities;
 using ZoraVault.Models.Internal;
+using ZoraVault.Models.Internal.Enum;
 
 namespace ZoraVault.Services
 {
@@ -108,6 +109,27 @@ namespace ZoraVault.Services
         /// </summary>
         public async Task<CreateSessionResponse> CreateSessionAsync(Guid userId, Guid deviceId, string ipAddress)
         {
+            // Ensure user settings exist for this device
+            UserSettings? existingSettings = await _db.UserSettings
+                .FirstOrDefaultAsync(us => us.UserId == userId && us.DeviceId == deviceId);
+            if (existingSettings == null)
+            {
+                await _db.UserSettings.AddAsync(new UserSettings
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    DeviceId = deviceId,
+                    ClipboardClearDelaySeconds = 15,
+                    EnableClipboardClearing = true,
+                    AllowScreenCapture = false,
+                    Theme = ThemeType.Dark,
+                    UnlockWithBiometrics = false,
+                    SessionTimeoutMinutes = 3,
+                    EnableAutoFill = true,
+                    EnableAccessibility = true
+                });
+            }
+
             // Try to find an existing session for the user and device
             Session? session = await _db.Sessions.FirstOrDefaultAsync(s => s.UserId == userId && s.DeviceId == deviceId);
 
