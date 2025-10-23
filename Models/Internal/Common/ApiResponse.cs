@@ -38,6 +38,11 @@
             return new ApiResponse<T>(true, 201, message, data);
         }
 
+        public static ApiResponse<T> NoContent(string message = "No Content")
+        {
+            return new ApiResponse<T>(true, 204, message, default);
+        }
+
         public static ApiResponse<T> BadRequest(IEnumerable<string>? errors = null, string message = "Bad Request")
         {
             return new ApiResponse<T>(false, 400, message, default, errors);

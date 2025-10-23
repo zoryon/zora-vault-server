@@ -7,6 +7,7 @@ using ZoraVault.Services;
 using ZoraVault.Models.DTOs.Challenges;
 using ZoraVault.Models.DTOs.Users;
 using ZoraVault.Models.Internal.Common;
+using ZoraVault.Extensions;
 
 namespace ZoraVault.Controllers
 {
@@ -139,6 +140,26 @@ namespace ZoraVault.Controllers
                 200,
                 "Access token refreshed successfully"
             );
+        }
+
+        // ---------------------------------------------------------------------------
+        // DELETE /api/users/me/sessions/{sessionId}
+        // ---------------------------------------------------------------------------
+        /// <summary>
+        /// Revokes (deletes) a specific user session by its ID.
+        /// Ensures that the authenticated user owns the session before deletion.
+        /// ! ! ! This endpoint overrides the default route prefix (/api/sessions) to be under /api/users/me ! ! !
+        /// </summary>
+        [HttpDelete("/api/users/me/sessions/{sessionId}")]
+        public async Task<ApiResponse<object>> DeleteSessionAsync([FromRoute] Guid sessionId)
+        {
+            AuthContext ctx = HttpContext.GetAuthContext();
+
+            bool isRevoked = await _authService.RevokeSessionAsync(ctx.UserId, sessionId);
+            if (!isRevoked)
+                throw new KeyNotFoundException("Session not found");
+
+            return ApiResponse<object>.NoContent("The session was successfully revoked");
         }
     }
 }

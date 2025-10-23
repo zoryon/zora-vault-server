@@ -231,5 +231,20 @@ namespace ZoraVault.Services
             // Return a freshly issued access token
             return SecurityHelpers.GenerateAccessToken(userId, deviceId, _secrets.AccessTokenSecret);
         }
+
+        /// <summary>
+        /// Delete a user session by its ID.
+        /// Ensures that the user owns the session before revoking it.
+        /// </summary>
+        public async Task<bool> RevokeSessionAsync(Guid userId, Guid SessionId)
+        {
+            int affectedRows = await _db.Sessions.Where(s => s.UserId == userId && s.Id == SessionId)
+                .ExecuteDeleteAsync();
+
+            if (!(affectedRows > 0))
+                throw new KeyNotFoundException("Session not found");
+
+            return affectedRows > 0;
+        }
     }
 }
