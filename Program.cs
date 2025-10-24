@@ -42,6 +42,10 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// --------------------------------------------------------------------
+// SMTP EMAIL SERVICE
+// --------------------------------------------------------------------
+builder.Services.AddTransient<IEmailService, EmailService>();
 
 // --------------------------------------------------------------------
 // MIDDLEWARE PIPELINE
