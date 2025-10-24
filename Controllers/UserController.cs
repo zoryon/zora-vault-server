@@ -110,7 +110,7 @@ namespace ZoraVault.Controllers
         /// Deletes the currently authenticated user's account.
         /// Requires re-authentication for security.
         /// </summary>
-        [HttpPost("me")]
+        [HttpDelete("me")]
         public async Task<ApiResponse<Guid>> DeleteCurrentUserAccountAsync([FromBody] UserAuthRequest req)
         {
             // Authenticate the user
