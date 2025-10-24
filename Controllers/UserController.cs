@@ -101,5 +101,25 @@ namespace ZoraVault.Controllers
 
             return ApiResponse<UpdateUserSettingsResponse>.SuccessResponse(usr, 200, "Fields were updated successfully");
         }
+
+
+        // ---------------------------------------------------------------------------
+        // DELETE /api/users/me
+        // ---------------------------------------------------------------------------
+        /// <summary>
+        /// Deletes the currently authenticated user's account.
+        /// Requires re-authentication for security.
+        /// </summary>
+        [HttpPost("me")]
+        public async Task<ApiResponse<Guid>> DeleteCurrentUserAccountAsync([FromBody] UserAuthRequest req)
+        {
+            // Authenticate the user
+            PublicUser user = await _authService.AuthenticateUserAsync(req)
+                ?? throw new UnauthorizedAccessException("Invalid credentials");
+
+            Guid removedId = await _userService.RemoveCurrentUserAccountAsync(user.Id);
+
+            return ApiResponse<Guid>.SuccessResponse(removedId, 200, "User account and all related data were deleted successfully");
+        }
     }
 }

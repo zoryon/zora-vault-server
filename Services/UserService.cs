@@ -31,7 +31,7 @@ namespace ZoraVault.Services
         public async Task<PublicUser> FetchCurrentUserAsync(Guid userId)
         {
             User? user = await _db.Users
-                    .AsNoTracking() 
+                    .AsNoTracking()
                     .FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user == null)
@@ -78,12 +78,36 @@ namespace ZoraVault.Services
                     .FirstOrDefaultAsync(u => u.UserId == userId && u.DeviceId == deviceId);
             if (us == null)
                 throw new KeyNotFoundException("User settings for specified device were not found");
-            
+
             _db.Entry(us).CurrentValues.SetValues(req);
 
             await _db.SaveChangesAsync();
 
             return new UpdateUserSettingsResponse(us);
+        }
+
+        /// <summary>
+        /// Permanently removes the specified user account and all related data (sessions, devices, vault items, etc.).
+        /// </summary>
+        /// <param name="userId">The unique ID of the user to remove.</param>
+        /// <returns>The ID of the deleted user.</returns>
+        /// <exception cref="KeyNotFoundException">Thrown if the user does not exist.</exception>
+        public async Task<Guid> RemoveCurrentUserAccountAsync(Guid userId)
+        {
+            using var tx = await _db.Database.BeginTransactionAsync();
+
+            int deletedUserRecord = await _db.Users.Where(u => u.Id == userId).ExecuteDeleteAsync();
+            if (deletedUserRecord != 1)
+                throw new KeyNotFoundException("User was not found");
+
+            await _db.Sessions.Where(s => s.UserId == userId).ExecuteDeleteAsync();
+            await _db.UserDevices.Where(ud => ud.UserId == userId).ExecuteDeleteAsync();
+            await _db.VaultItems.Where(vi => vi.UserId == userId).ExecuteDeleteAsync();
+            await _db.UserSettings.Where(us => us.UserId == userId).ExecuteDeleteAsync();
+
+            await tx.CommitAsync();
+
+            return userId;
         }
     }
 }

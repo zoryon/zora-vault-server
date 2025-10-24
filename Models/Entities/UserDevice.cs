@@ -1,4 +1,6 @@
-﻿namespace ZoraVault.Models.Entities
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace ZoraVault.Models.Entities
 {
     public class UserDevice
     {
