@@ -17,6 +17,8 @@ namespace ZoraVault.Models.Entities
         [MaxLength(254)]
         public required string Email { get; set; }
 
+        public bool IsEmailVerified { get; set; } = false;
+
         [MaxLength(4096)]
         public required string ServerPasswordHash { get; set; }
 

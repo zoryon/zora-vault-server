@@ -16,9 +16,7 @@ namespace ZoraVault.Data
         /// <summary>
         /// Constructor for ApplicationDbContext, receiving DbContextOptions from DI.
         /// </summary>
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
-        {
-        }
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
         // ---------------------------------------------------------------------------
         // DbSet properties (tables)
@@ -32,10 +30,26 @@ namespace ZoraVault.Data
         public DbSet<UserSettings> UserSettings { get; set; }
 
         // ---------------------------------------------------------------------------
+        // Helper Methods
+        // ---------------------------------------------------------------------------
+        /// <summary>
+        /// Returns an <see cref="IQueryable{User}"/> that includes both verified and unverified users,
+        /// ignoring the global query filter applied in <see cref="OnModelCreating(ModelBuilder)"/>.
+        /// </summary>
+        public IQueryable<User> UsersWithUnverified() =>
+            Users.IgnoreQueryFilters();
+
+        // ---------------------------------------------------------------------------
         // Model configuration
         // ---------------------------------------------------------------------------
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            base.OnModelCreating(modelBuilder);
+
+            // Global query filter for User: Don't return unverified users by default
+            modelBuilder.Entity<User>()
+                    .HasQueryFilter(u => u.IsEmailVerified);
+
             // Conversion for KdfParamsDTO:
             // The KdfParams property of User is a complex type.
             // EF Core cannot map it directly, so we serialize it to JSON for storage.

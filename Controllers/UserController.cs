@@ -21,16 +21,18 @@ namespace ZoraVault.Controllers
     {
         private readonly AuthService _authService;  // Service responsible for auth operations
         private readonly UserService _userService;  // Handles user data fetching and settings updates
+        private readonly EmailService _emailService; // Service for sending emails
 
         /// <summary>
         /// Constructor injects required services.
         /// </summary>
         /// <param name="authService">The authentication service for registration and security operations.</param>
         /// <param name="userService">The user service for fetching and updating user data.</param>
-        public UserController(AuthService authService, UserService userService)
+        public UserController(AuthService authService, UserService userService, EmailService emailService)
         {
             _authService = authService;
             _userService = userService;
+            _emailService = emailService;
         }
 
         // ---------------------------------------------------------------------------
@@ -50,6 +52,22 @@ namespace ZoraVault.Controllers
         }
 
         // ---------------------------------------------------------------------------
+        // GET /api/users/email-verifications
+        // ---------------------------------------------------------------------------
+        /// <summary>
+        /// Verifies a user's email using the provided token.
+        /// </summary>
+        /// <returns>A <see cref="bool"/> Contains the result of the operation.</returns>
+        [HttpGet("email-verifications/{token}")]
+        public async Task<ApiResponse<bool>> VerifyEmailAsync([FromRoute] string token)
+        {
+            Guid userId = _emailService.VerifyEmailJWT(token);
+            bool success = await _authService.MarkEmailAsVerifiedAsync(userId);
+
+            return ApiResponse<bool>.SuccessResponse(success);
+        }
+
+        // ---------------------------------------------------------------------------
         // POST /api/users
         // ---------------------------------------------------------------------------
         /// <summary>
@@ -63,6 +81,13 @@ namespace ZoraVault.Controllers
         {
             // Delegate user registration to the AuthService (handles all validations and hashing)
             PublicUser user = await _authService.RegisterUserAsync(req);
+
+            string link = _emailService.CreateEmailVerificationLink(user);
+            await _emailService.SendEmailAsync(
+                user.Email,
+                "Verify your email", 
+                $"Please verify your email by clicking <a href=\"{link}\">here</a>."
+            );
 
             return ApiResponse<PublicUser>.Created(user);
         }

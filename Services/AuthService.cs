@@ -36,19 +36,19 @@ namespace ZoraVault.Services
         public async Task<PublicUser> RegisterUserAsync(UserRegistrationRequest req)
         {
             // Check for duplicates (username or email must be unique)
-            if (await _db.Users.AnyAsync(u => u.Username == req.Username))
+            if (await _db.UsersWithUnverified().AnyAsync(u => u.Username == req.Username))
                 throw new DuplicateNameException("A user with the same username already exists");
 
-            if (await _db.Users.AnyAsync(u => u.Email == req.Email))
+            if (await _db.UsersWithUnverified().AnyAsync(u => u.Email == req.Email))
                 throw new DuplicateNameException("A user with the same email already exists");
 
             // The request's PasswordHash is the client-side hashed password (using argon2id)
             // Here, it's added another layer of security by hashing it again with PBKDF2 + server-side secret (pepper)
             string serverSalt = SecurityHelpers.GenerateSalt();
             string serverPasswdHash = SecurityHelpers.HashPassword(
-                _secrets.ServerSecret,  // pepper (secret stored only on server)
-                req.PasswordHash,       // client-side hash
-                serverSalt,             // per-user salt
+                _secrets.ServerSecret,      // pepper (secret stored only on server)
+                req.PasswordHash,           // client-side hash
+                serverSalt,                 // per-user salt
                 req.KdfParams.Iterations,
                 req.KdfParams.KeyLength
             );
@@ -245,6 +245,21 @@ namespace ZoraVault.Services
                 throw new KeyNotFoundException("Session not found");
 
             return affectedRows > 0;
+        }
+
+        /// <summary>
+        /// Updates the user's email verification status to true.
+        /// </summary>
+        public async Task<bool> MarkEmailAsVerifiedAsync(Guid userId)
+        {
+            int affectedRows = await _db.UsersWithUnverified()
+                .Where(u => u.Id == userId)
+                .ExecuteUpdateAsync(u => u.SetProperty(user => user.IsEmailVerified, true));
+
+            if (affectedRows != 1)
+                throw new KeyNotFoundException("User not found or email already verified");
+
+            return affectedRows == 1;
         }
     }
 }
