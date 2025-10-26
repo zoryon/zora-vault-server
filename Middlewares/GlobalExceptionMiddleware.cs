@@ -67,7 +67,6 @@ namespace ZoraVault.Middlewares
                 _ => StatusCodes.Status500InternalServerError
             };
 
-
             var response = new
             {
                 message = ex.Message,

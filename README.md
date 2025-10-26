@@ -59,10 +59,13 @@ The authentication process is a three-step flow to ensure security:
 These endpoints manage user accounts, profiles, and settings.
 
 * `POST /api/users`
-    Registers a new user account. This endpoint performs all necessary validations and securely hashes the master password before storage.
+    Registers a new user account. This endpoint performs all necessary validations and securely hashes the master password before storage. Also sends a verification email.
 
 * `GET /api/users/me`
     Retrieves the profile information for the currently authenticated user.
+
+* `GET /api/users/email-verifications?token={token}`
+    Marks the email of a user as verified.
 
 * `PATCH /api/users/me`
     Updates specific fields for the current user, such as their username or the main encrypted vault blob.

@@ -52,14 +52,15 @@ namespace ZoraVault.Controllers
         }
 
         // ---------------------------------------------------------------------------
-        // GET /api/users/email-verifications
+        // GET /api/users/email-verifications?token={token}
         // ---------------------------------------------------------------------------
         /// <summary>
         /// Verifies a user's email using the provided token.
         /// </summary>
-        /// <returns>A <see cref="bool"/> Contains the result of the operation.</returns>
-        [HttpGet("email-verifications/{token}")]
-        public async Task<ApiResponse<bool>> VerifyEmailAsync([FromRoute] string token)
+        /// <param name="token">The email verification token.</param>
+        /// <returns>A <see cref="bool"/> indicating the result of the operation.</returns>
+        [HttpGet("email-verifications")]
+        public async Task<ApiResponse<bool>> VerifyEmailAsync([FromQuery] string token)
         {
             Guid userId = _emailService.VerifyEmailJWT(token);
             bool success = await _authService.MarkEmailAsVerifiedAsync(userId);
