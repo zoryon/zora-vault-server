@@ -34,6 +34,9 @@ builder.Services.AddAppSecrets(builder.Configuration);
 // --------------------------------------------------------------------
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<DeviceService>();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<VaultItemService>();
+builder.Services.AddScoped<EmailService>();
 
 // --------------------------------------------------------------------
 // CONTROLLERS & SWAGGER
@@ -60,8 +63,8 @@ if (app.Environment.IsDevelopment())
 }
 
 // GLOBAL CUSTOM MIDDLEWARES (in order)
-app.UseMiddleware<AuthMiddleware>();
 app.UseMiddleware<GlobalExceptionMiddleware>();
+app.UseMiddleware<AuthMiddleware>();
 
 app.UseHttpsRedirection();
 app.UseAuthorization();

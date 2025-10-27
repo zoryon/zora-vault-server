@@ -38,7 +38,7 @@ namespace ZoraVault.Services
         /// <summary>
         /// Finds a device by its public key fingerprint or registers a new one if it does not exist.
         /// </summary>
-        /// <param name="publicKey">Device's public key in base64 format</param>
+        /// <param name="publicKeyBase64">Device's public key in base64 format</param>
         /// <returns>A <see cref="PublicDevice"/> containing device info</returns>
         public async Task<PublicDevice> FindOrRegisterDeviceAsync(string publicKeyBase64)
         {
@@ -76,6 +76,9 @@ namespace ZoraVault.Services
         /// <returns>True if saved successfully, false otherwise</returns>
         public async Task<bool> SaveTempChallengeAsync(PublicDevice pubDevice, string plainChallenge)
         {
+            if (string.IsNullOrWhiteSpace(plainChallenge))
+                throw new ArgumentException("Challenge cannot be empty", nameof(plainChallenge));
+
             // Find device in database
             Device? device = await _db.Devices.FirstOrDefaultAsync(d => d.Id == pubDevice.Id)
                 ?? throw new KeyNotFoundException("Device not found");
@@ -138,7 +141,9 @@ namespace ZoraVault.Services
             if (payload == null)
                 throw new UnauthorizedAccessException("Invalid challenge");
 
-            // Check device ID matches
+            // Check user and device IDs match
+            if (payload.UserId != userId)
+                throw new SecurityException("Challenge user ID mismatch");
             if (payload.DeviceId != device.Id)
                 throw new SecurityException("Challenge device ID mismatch");
 
