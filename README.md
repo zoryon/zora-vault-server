@@ -85,13 +85,16 @@ These endpoints handle the creation and management of individual vault items.
 > **Important:** To maintain the zero-knowledge guarantee, all `EncryptedData` sent to these endpoints **must be encrypted on the client-side** before the API call is made.
 
 * `GET /api/users/me/vault-items`
-    Retrieves a list of all vault items for the authenticated user.
+    Retrieves a list of all vault items for the authenticated user. Optionally accepts the query parameter ?deleted=true to include soft-deleted (trashed) items instead of active ones.
 
 * `POST /api/users/me/vault-items`
     Creates a new vault item.
 
 * `GET /api/users/me/vault-items/{itemId}`
     Retrieves a single vault item by its ID.
+
+* `PATCH /api/users/me/vault-items/{vaultItemId}`
+    Restores a soft-deleted vault item back to active status.    
 
 * `PUT /api/users/me/vault-items/{itemId}`
     Updates an existing vault item by completely replacing its `EncryptedData` and `Type`.

@@ -37,12 +37,22 @@ namespace ZoraVault.Controllers
         /// If no items exist, returns an empty list (not null).
         /// </summary>
         [HttpGet("/api/users/me/vault-items")]
-        public async Task<ApiResponse<List<PublicVaultItem>>> GetVaultItemsAsync()
+        public async Task<ApiResponse<List<PublicVaultItem>>> GetVaultItemsAsync([FromQuery] bool? deleted = null)
         {
             AuthContext ctx = HttpContext.GetAuthContext();
 
+            List<PublicVaultItem> items;
             // Fetch all vault items for the user and convert them to public objects
-            List<PublicVaultItem> items =  await _vaultItemService.FetchVaultItemsAsync(ctx.UserId);
+            if (deleted.HasValue && deleted == true)
+            {
+                // Fetch soft deleted items
+                items = await _vaultItemService.FetchSoftRemovedVaultItemAsync(ctx.UserId);
+            }
+            else
+            {
+                // Fetch active (non-deleted) items
+                items = await _vaultItemService.FetchVaultItemsAsync(ctx.UserId);
+            }
 
             return ApiResponse<List<PublicVaultItem>>.SuccessResponse(items);
         }
@@ -92,6 +102,24 @@ namespace ZoraVault.Controllers
         }
 
         // ---------------------------------------------------------------------------
+        // PATCH /api/users/me/vault-items/{vaultItemId}
+        // ---------------------------------------------------------------------------
+        /// <summary>
+        /// Restores a soft-deleted vault item (moves it back to active state).
+        /// This is a RESTful resource update, not an action.
+        /// </summary>
+        [HttpPatch("/api/users/me/vault-items/{vaultItemId}")]
+        public async Task<ApiResponse<PublicVaultItem>> UpdateDeletedVaultItemAsync([FromRoute] Guid vaultItemId)
+        {
+            AuthContext ctx = HttpContext.GetAuthContext();
+
+            PublicVaultItem restoredItem = await _vaultItemService.RestoreSoftRemovedVaultItemAsync(ctx.UserId, vaultItemId);
+
+            return ApiResponse<PublicVaultItem>.SuccessResponse(restoredItem, 200, "Vault item was restored successfully");
+        }
+
+
+        // ---------------------------------------------------------------------------
         // PUT /api/users/me/vault-item/{vaultItemId}
         // ---------------------------------------------------------------------------
         /// <summary>
@@ -119,15 +147,15 @@ namespace ZoraVault.Controllers
         // DELETE /api/users/me/vault-item/{vaultItemId}
         // ---------------------------------------------------------------------------
         /// <summary>
-        /// Deletes a vault item for the authenticated user.
-        /// Returns only the ID of the deleted item for confirmation.
+        /// Soft deletes a vault item for the authenticated user.
+        /// Returns only the ID of the soft deleted item for confirmation.
         /// </summary>
         [HttpDelete("/api/users/me/vault-item/{vaultItemId}")]
         public async Task<ApiResponse<Guid>> DeleteVaultItemAsync([FromRoute] Guid vaultItemId)
         {
             AuthContext ctx = HttpContext.GetAuthContext();
 
-            Guid removedId = await _vaultItemService.RemoveVaultItemAsync(ctx.UserId, vaultItemId);
+            Guid removedId = await _vaultItemService.SoftRemoveVaultItemAsync(ctx.UserId, vaultItemId);
 
             return ApiResponse<Guid>.SuccessResponse(removedId, 200, "Vault item was removed successfully");
         }

@@ -50,6 +50,10 @@ namespace ZoraVault.Data
             modelBuilder.Entity<User>()
                     .HasQueryFilter(u => u.IsEmailVerified);
 
+            // Global query filter for VaultItem: Don't return soft deleted vault items by default
+            modelBuilder.Entity<VaultItem>()
+                    .HasQueryFilter(vi => vi.DeletedAt == null);
+
             // Conversion for KdfParamsDTO:
             // The KdfParams property of User is a complex type.
             // EF Core cannot map it directly, so we serialize it to JSON for storage.
