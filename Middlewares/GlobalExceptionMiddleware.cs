@@ -67,15 +67,15 @@ namespace ZoraVault.Middlewares
                 _ => StatusCodes.Status500InternalServerError
             };
 
-            var response = new
-            {
-                message = ex.Message,
-                errorType = ex.GetType().Name
-            };
+            var apiResponse = ZoraVault.Models.Internal.Common.ApiResponse<object>.ErrorResponse(
+                statusCode: statusCode,
+                message: ex.Message,
+                errors: [ex.GetType().Name]
+            );
 
             context.Response.ContentType = "application/json";
             context.Response.StatusCode = statusCode;
-            return context.Response.WriteAsJsonAsync(response);
+            return context.Response.WriteAsJsonAsync(apiResponse);
         }
     }
 }
